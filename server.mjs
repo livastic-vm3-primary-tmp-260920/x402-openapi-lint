@@ -626,7 +626,19 @@ app.get("/v1/csv-report",(req,res,next)=>{
   next();
 },payment,(_req,res)=>res.status(200).json({
   ...demoCsvReport,paid:true,chargedUSDC:"0.005",network:NETWORK,
-  purpose:"Reproducible original demonstration CSV anomaly report; source and analyser publicly available; this is NOT prior paid customer work."
+  purpose:"Reproducible original demonstration CSV anomaly report; source and analyser publicly available; this is NOT prior paid customer work.",
+  nextBuyerTask:{
+    purpose:"Validate YOUR OWN synthetic/nonsecret CSV before import instead of repeating a static demonstration GET.",
+    method:"POST",endpoint:"https://vm5-openapi-x402.onrender.com/v1/csv-preflight",
+    contentType:"application/json",
+    exampleBody:{csvText:DEMO_CSV,expectedColumns:["email","amount","date","note"]},
+    priceUSDC:"0.005",network:NETWORK,
+    freePreview:"https://vm5-openapi-x402.onrender.com/v1/csv-sample",
+    buyerGuide:"https://github.com/livastic-vm5-primary-20260911/x402-openapi-lint/blob/main/docs/CSV_REAL_DATA_BUYER_QUICKSTART_20261020.md",
+    mustIndependentlyAuthorizePayment:true,
+    confirmedIndependentPaidPOSTBuyers:0,
+    privacy:"Only nonsecret CSV, no private identifiers. Invalid input is rejected BEFORE payment. This is structural heuristics, not compliance or data authenticity."
+  }
 }));
 
 const csvRate=new Map();

@@ -91,6 +91,14 @@ test("LOCAL MOCK ONLY, no money: exact payment challenge releases synthetic CSV 
  assert.equal(obj.spreadsheetFormulaRiskCells,1);
  assert.equal(obj.irregularRows,1);
  assert.equal(obj.noRawDataReturned,true);
+ assert.equal(obj.nextBuyerTask.method,"POST");
+ assert.equal(obj.nextBuyerTask.endpoint,"https://vm5-openapi-x402.onrender.com/v1/csv-preflight");
+ assert.equal(obj.nextBuyerTask.priceUSDC,"0.005");
+ assert.equal(obj.nextBuyerTask.network,"eip155:8453");
+ assert.equal(obj.nextBuyerTask.exampleBody.csvText,DEMO_CSV);
+ assert.equal(obj.nextBuyerTask.confirmedIndependentPaidPOSTBuyers,0);
+ assert.equal(obj.nextBuyerTask.mustIndependentlyAuthorizePayment,true);
+ assert.ok(obj.nextBuyerTask.privacy.includes("BEFORE payment"));
  assert.ok(paid.headers.get("PAYMENT-RESPONSE"));
 });
 test("LOCAL MOCK ONLY, no money: actual buyer CSV yields useful bound output no raw client cells",async()=>{
