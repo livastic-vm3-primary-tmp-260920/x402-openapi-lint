@@ -391,6 +391,17 @@ app.get("/v1/csv-sample",(_req,res)=>res.json({
   ok:true,paid:false,kind:"original_synthetic_csv_structural_qa_offer",
   sampleCsv:DEMO_CSV,requestedExpectedHeaders:["email","amount","date","note"],
   paidGET:"GET /v1/csv-report",paidPOST:"POST /v1/csv-preflight",
+  buyerOwnedCsv:{
+    method:"POST",url:"https://vm5-openapi-x402.onrender.com/v1/csv-preflight",
+    contentType:"application/json",
+    exampleBody:{csvText:DEMO_CSV,expectedColumns:["email","amount","date","note"]},
+    priceUSDC:"0.005",network:NETWORK,
+    whatYouBuy:"Structural quality report on YOUR submitted CSV, not the static demo. Invalid CSV is rejected before payment.",
+    paymentGate:"Valid unpaid JSON input first receives HTTP 402 PAYMENT-REQUIRED. Buyer must independently authorize an x402 v2 payment before any charge or report delivery.",
+    privacy:"No application-side persistence or raw row value echo; do not submit secrets, private identities or production account data.",
+    confirmedIndependentPaidPOSTCustomers:0,
+    sourceGuide:"https://github.com/livastic-vm5-primary-20260911/x402-openapi-lint/blob/main/docs/CSV_REAL_DATA_BUYER_QUICKSTART_20261020.md"
+  },
   priceUSDC:"0.005",network:NETWORK,
   sourceDataset:"Synthetic original public demo only, no personal/customer data",
   issuesPresent:["one duplicate data row","one irregular column count",

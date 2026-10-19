@@ -1,5 +1,7 @@
 # VM5 x402 OpenAPI Lint — paid API pilot
 
+**Use your OWN CSV:** The original live [0.005 USDC customer-input CSV structural preflight](docs/CSV_REAL_DATA_BUYER_QUICKSTART_20261020.md) accepts an actual 32 KB-or-smaller JSON CSV at **POST /v1/csv-preflight**. [Inspect a free synthetic request example](https://vm5-openapi-x402.onrender.com/v1/csv-sample) before paying. Invalid input is rejected without charge; a valid unpaid request receives an authentic Base-USDC HTTP 402 quote. The paid static GET report is different from processing a customer's dataset. No real paid POST customer is verified.
+
 **New, live 2026-10-19: [0.005 Base USDC public-domain MX/SPF/DMARC configuration preflight](docs/EMAIL_DNS_PAID_PUBLIC_SERVICE_20261019.md)** — optional domain input, HTTP 402 on valid paid requests and HTTP 400/404/503 on invalid/unavailable DNS before payment. [Free synthetic preview](https://vm5-openapi-x402.onrender.com/v1/email-dns-sample). This new route has **zero independently proven paid orders**; do not confuse it with the two earlier NoHumans scout purchases.
 
 AI-agent-callable OpenAPI documentation lint: **0.01 USDC per valid lint invocation** on Base (chain 8453), using x402 v2. Runs Redocly 2.64.1 recommended rules against YAML/JSON and returns structured severities, rule IDs, JSON pointers, messages, error/warning counts and an overall lint validity flag.

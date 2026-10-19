@@ -39,6 +39,15 @@ test("Free synthetic CSV source sample is transparent, zero fake orders and no x
  assert.equal(d.confirmedCsvPaidOrders,1);
  assert.ok(d.sampleCsv.includes("email,amount,date,note"));
  assert.ok(d.disclosure.includes("reproducible"));
+ assert.equal(d.buyerOwnedCsv.method,"POST");
+ assert.equal(d.buyerOwnedCsv.url,"https://vm5-openapi-x402.onrender.com/v1/csv-preflight");
+ assert.equal(d.buyerOwnedCsv.contentType,"application/json");
+ assert.equal(d.buyerOwnedCsv.priceUSDC,"0.005");
+ assert.equal(d.buyerOwnedCsv.network,"eip155:8453");
+ assert.equal(d.buyerOwnedCsv.confirmedIndependentPaidPOSTCustomers,0);
+ assert.equal(d.buyerOwnedCsv.exampleBody.csvText,DEMO_CSV);
+ assert.ok(d.buyerOwnedCsv.paymentGate.includes("HTTP 402"));
+ assert.equal(d.buyerOwnedCsv.exampleBody.expectedColumns.length,4);
 });
 test("CSV paid demo request without buyer data is valid 0.005 Base USDC x402 402",async()=>{
  const r=await fetch(BASE+"/v1/csv-report");
