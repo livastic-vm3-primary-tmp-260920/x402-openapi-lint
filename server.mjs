@@ -308,6 +308,18 @@ app.get("/.well-known/402index-verify.txt",(_req,res)=>{
   if(!/^[0-9a-f]{64}$/.test(hash))return res.status(503).type("text/plain").send("verification file invalid");
   return res.type("text/plain").send(hash);
 });
+// FREE true402 original seller metadata. Advertises the SAME already-existing
+// 0.010000 native Base Circle USDC template route and original payTo.
+// Use runtime facilitator rather than stale 2026-10-17 registration fallback.
+// No buyer data, wallet signature, checkout, funds movement or paid-route change.
+app.get("/.well-known/x402-service.json",(_req,res)=>res.status(200).json({
+  x402:"1.0",name:"VM5 x402 v2 OpenAPI Reference Template",
+  description:"Original, Redocly-validated x402 v2 OpenAPI 3.0.3 YAML reference. Base USDC 402 payment header examples for developers. Starter template only; no custodial wallet, payment processing, live settlement guarantee or security audit.",
+  capabilities:["x402","openapi","api-schema","crypto-payments","developer-tools"],
+  pricing:{currency:"USDC",base:"0.01",unit:"request"},
+  payment:{address:PAY_TO,chain:"base",facilitator:FACILITATOR_URL},
+  endpoint:"https://vm5-openapi-x402.onrender.com/v1/x402-template"
+}));
 app.get("/llms.txt",(_req,res)=>res.status(200).type("text/plain; charset=utf-8").send(fs.readFileSync(path.resolve(DIR,"verification/llms.txt"),"utf8")));
 app.get("/health",(_req,res)=>res.json({ok:true,service:"vm5-openapi-x402",network:NETWORK,paidRoute:"POST /v1/lint",sampleRedoclyErrors:sampleReport.errors}));
 app.get("/v1/docs",(_req,res)=>res.json(documentation));
