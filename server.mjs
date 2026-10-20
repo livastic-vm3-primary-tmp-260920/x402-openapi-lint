@@ -12,6 +12,7 @@ import {validateReceiptQuery,preflightBaseUSDCReceipt} from "./base-usdc-receipt
 import {parseGlbBase64, MAX_GLB_BYTES} from "./glb-analyzer.mjs";
 import {generateOriginalGlb} from "./procedural-lowpoly-generator.mjs";
 import {inspectCsv,validateCsvInput,DEMO_CSV,CSV_LIMITS} from "./csv-preflight.mjs";
+import {inspectInvoicePair,INVOICE_DEMO,INVOICE_API_LIMITS} from "./invoice-reconcile.mjs";
 import {inspectWorkflow,PUBLIC_SYNTHETIC_YAML,MAX_INPUT_BYTES as WORKFLOW_MAX_BYTES} from "./workflow-risk/preflight.mjs";
 import {parsePublicQuote,evaluatePublicQuote,EXAMPLE_QUOTE,VERSION as VM3_QUOTE_VERSION} from "./quote-preflight.mjs";
 import {validatePublicDomain,auditEmailDns} from "./email-dns-preflight.mjs";
@@ -95,6 +96,12 @@ const documentation={
     sample:"GET /v1/workflow-risk-sample",confirmedIndependentPaidCustomers:0,
     source:"MIT original same-owner VM2 analyzer: https://github.com/livastic-vm2-primary-20260911/apify-workflow-guard",
     limitations:"AI-assisted static findings may contain false positives/negatives. No security certification, KYC validation, private CI data or compliance warranty. Do not submit secrets, private client workflows or sensitive environment tokens."},
+  paidInvoice:{method:"POST",path:"/v1/invoice-reconcile",priceUSDC:"0.005",network:NETWORK,
+    purpose:"Buyer-supplied NONCONFIDENTIAL Base native Circle USDC invoice and SELF-REPORTED transfer CSV candidate matching. Flags duplicates, reported partials, pending rows and ambiguous wallets; does NOT establish real onchain finality or a paid invoice.",
+    input:{invoicesCsv:"invoice_id,recipient,amount_usdc,chain,token",transfersCsv:"invoice_id,tx_hash,log_index,recipient,amount_usdc,chain,token,status",maxBytesEach:65536,maxDataRows:500},
+    freePreview:"GET /v1/invoice-reconcile-sample",
+    precautions:"Only synthetic/public nonsecret CSV. The hosted API receives your CSV over HTTPS; for local-only confidential review use our separate FREE browser tool. Reject malformed data BEFORE any payment.",
+    paidCustomers:0},
   paidCsvDemo:{method:"GET",path:"/v1/csv-report",priceUSDC:"0.005",network:NETWORK,
     purpose:"Deliver a full machine-readable integrity report of an original synthetic test CSV. No customer data, request inputs or special query; pays for structured ready-to-consume report, which can also be computed from disclosed public sample."},
   paidEmailDns:{method:"GET",path:"/v1/email-dns-preflight",priceUSDC:"0.005",network:NETWORK,
@@ -125,7 +132,8 @@ const documentation={
   free:{
     "/health":"Basic readiness check, no payment",
     "/v1/sample":"Full example lint result from independently verified public sample",
-    "/v1/docs":"JSON API and payment terms"
+    "/v1/docs":"JSON API and payment terms",
+    "/v1/invoice-reconcile-sample":"Free synthetic Base USDC invoice-to-self-reported-transfer anomaly report; no payment or RPC."
   },
   scope:"Redocly recommended schema/documentation lint, no external $ref, no runtime server access, not a security certification",
   privacy:"Submitted specs are held in memory/temp files only for request processing, deleted after each run; no telemetry or access logging in application code. Cloudflare and the facilitator are separate external services; avoid secrets and client data.",
@@ -160,6 +168,22 @@ const routes={
       output:{example:{ok:true,paid:true,chargedUSDC:"0.001",network:"eip155:8453",
         kind:"x402_paid_integration_ping",serviceResponseAfterPaymentMiddleware:true,
         thirdPartyFinalityProof:false}}
+    })
+  },
+  "POST /v1/invoice-reconcile":{
+    accepts:{scheme:"exact",price:"$0.005",network:NETWORK,payTo:PAY_TO},
+    description:"Two NONCONFIDENTIAL buyer-supplied CSV extracts, self-reported Base USDC invoice vs transfer event candidate matching. No actual RPC/onchain finality. Reports duplicates, partial receipts and unmatched/shared-wallet exceptions. Never send secrets or real customer/employee personal data to a hosted service.",
+    mimeType:"application/json",
+    extensions:declareDiscoveryExtension({
+      method:"POST",bodyType:"json",
+      input:{invoicesCsv:INVOICE_DEMO.invoices,transfersCsv:INVOICE_DEMO.transfers},
+      inputSchema:{type:"object",additionalProperties:false,required:["invoicesCsv","transfersCsv"],properties:{
+        invoicesCsv:{type:"string",description:"Synthetic or authorized public/nonconfidential invoice CSV, <=65536 UTF-8 bytes",maxLength:65536},
+        transfersCsv:{type:"string",description:"Synthetic or authorized public/nonconfidential reported USDC event CSV, <=65536 UTF-8 bytes",maxLength:65536}}},
+      output:{example:{ok:true,paid:true,chargedUSDC:"0.005",
+        kind:"base_usdc_self_reported_invoice_transfer_csv_candidate_reconciliation",
+        summary:{invoiceCount:4,reportedExact:1,reportedPartial:1,unreferencedEvents:1,pendingReported:1},
+        blockchainFinalityVerified:false,noRawWalletOrTxHash:true}}
     })
   },
   "GET /v1/csv-report":{
@@ -683,7 +707,42 @@ app.get("/v1/csv-report",(req,res,next)=>{
   }
 }));
 
+// Zero-payment synthetic preview; explicitly cannot prove any real transfer.
+app.get("/v1/invoice-reconcile-sample",(_req,res)=>{
+ const synthetic=inspectInvoicePair({invoicesCsv:INVOICE_DEMO.invoices,transfersCsv:INVOICE_DEMO.transfers});
+ if(!synthetic.ok)return res.status(503).json({ok:false,paid:false,error:"Free synthetic fixture unavailable."});
+ res.status(200).json({
+  ...synthetic,paid:false,chargedUSDC:"0",network:NETWORK,
+  syntheticOnly:true,
+  inventedRequest:{invoicesCsv:INVOICE_DEMO.invoices,transfersCsv:INVOICE_DEMO.transfers},
+  paidBuyerEndpoint:"POST https://vm5-openapi-x402.onrender.com/v1/invoice-reconcile",
+  priceUSDC:"0.005",maxBytesPerCsv:INVOICE_API_LIMITS.maxBytesPerCsv,
+  confirmedExternalPaidInvoiceCustomers:0,
+  freePrivateAlternative:"https://livastic-vm5-primary-20260911.github.io/vm5-delivery-lab/usdc-invoice-bridge/",
+  requiredConsent:"Only submit invented or nonconfidential authorized CSV; the hosted endpoint receives these data. Buyer must independently sign Base native Circle USDC payment AFTER 402."
+ });
+});
 const csvRate=new Map();
+const invoiceRate=new Map();
+app.post("/v1/invoice-reconcile",
+ express.json({limit:"144kb",type:["application/json","application/*+json"]}),
+ (req,res,next)=>{
+  const now=Date.now(),ip=req.ip,old=invoiceRate.get(ip);
+  const current=(!old||now-old.at>60000)?{at:now,count:0}:old;
+  current.count++;invoiceRate.set(ip,current);
+  if(invoiceRate.size>3000)for(const [key,v] of invoiceRate)if(now-v.at>60000)invoiceRate.delete(key);
+  if(current.count>12)return res.status(429).json({ok:false,charged:false,error:"Invoice CSV preflight limited to 12 attempts per minute per IP."});
+  if(!req.is("application/json")&&!req.is("application/*+json"))return res.status(415).json({ok:false,charged:false,error:"Use JSON only; no uploaded files, wallet keys or private customer data."});
+  const report=inspectInvoicePair(req.body);
+  if(!report.ok)return res.status(400).json({ok:false,charged:false,error:report.error,reason:report.reason,limits:INVOICE_API_LIMITS});
+  res.locals.invoiceReport=report;
+  next();
+ },payment,(_req,res)=>res.status(200).json({
+  ...res.locals.invoiceReport,paid:true,chargedUSDC:"0.005",network:NETWORK,
+  confirmedIndependentPaidInvoiceBuyers:0,
+  serviceScope:"Hosted convenience for an original, free, MIT-licensed, browser-local CSV candidate reconciliation algorithm. NO blockchain RPC, tax audit, legal settlement determination or wallet signing."
+ }));
+
 const workflowRate=new Map();
 app.post("/v1/workflow-risk",
  express.json({limit:"65kb",type:["application/json","application/*+json"]}),(req,res,next)=>{

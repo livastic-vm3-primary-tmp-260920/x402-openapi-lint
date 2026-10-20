@@ -1,5 +1,9 @@
 # VM5 x402 OpenAPI Lint — paid API pilot
 
+**NEW useful buyer problem: USDC invoice/transfer CSV exceptions.** [Exact original machine-buyer quickstart](docs/BASE_USDC_INVOICE_RECON_X402_BUYER_QUICKSTART_20261020.md) documents FREE invented `GET /v1/invoice-reconcile-sample` and independently buyer-signed x402 **0.005 native Base Circle USDC** `POST /v1/invoice-reconcile` on two expressly authorized NONCONFIDENTIAL CSVs. It identifies reported duplicate transactions, partial and pending rows, shared wallet ambiguity, and orphan transfers. Hosted means buyer input is transmitted; users with confidential data should prefer the existing separate FREE offline browser product. This does NOT independently verify real blockchain finality, invoice payment, user account ownership or tax. **No external buyer payment of this new product has yet been confirmed.** Public original source derives from the same-owner MIT local CSV code, 190 test suite checks including locally simulated x402 paid HTTP200 without USDC movement.
+
+
+
 **NEW candidate paid tool:** [GitHub Actions workflow-risk static analyzer](docs/WORKFLOW_RISK_PAID_BUYER_QUICKSTART_20261020.md) — free fully synthetic `GET /v1/workflow-risk-sample` and independently paid `POST /v1/workflow-risk`, **0.20 native Circle Base USDC** per valid x402 v2 call. This reuses the original SAME beneficial owner VM2 [MIT `apify-workflow-guard` analyzer](https://github.com/livastic-vm2-primary-20260911/apify-workflow-guard) with full copyright notice. **No real external buyer or revenue has been verified for this newly created route.** Do not confuse the localhost mocked facilitator tests with finalized external USDC funds or transfer private workflow secrets.
 
 
