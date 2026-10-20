@@ -4,7 +4,10 @@ export const BASE_CHAIN_ID=8453;
 export const BASE_USDC="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 export const ERC20_TRANSFER_TOPIC="0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 export const MIN_CONFIRMATIONS=12;
-const RPC_MAINNET="https://1rpc.io/base";
+// Two fixed and documented public Base8453 read providers. Neither permits
+// wallet signing, arbitrary host input, account reads or transaction submission.
+const RPC_MAINNET="https://public.1rpc.io/base";
+const RPC_PUBLIC_BACKUP="https://mainnet.base.org";
 const MAX_RPC_BYTES=950000;
 const ADDRESS=/^0x[0-9a-fA-F]{40}$/;
 const TRANSACTION=/^0x[0-9a-fA-F]{64}$/;
@@ -108,25 +111,55 @@ export function analyzeReceipt(receipt,headBlock,params) {
     caveat:"Event-based USDC amount only; does not prove invoice intent, account control, payer KYC, final irrevocability or independently earned income."
   }};
 }
-export async function baseRpcRead(method,params,{rpcUrl}={}) {
-  if(!["eth_chainId","eth_blockNumber","eth_getTransactionReceipt"].includes(method))
-    throw new Error("Refusing unapproved or mutating JSON-RPC method");
-  const origin=rpcUrl??process.env.BASE_RPC_URL??RPC_MAINNET;
-  if(origin!==RPC_MAINNET && !(process.env.NODE_ENV==="test"&&/^http:\/\/127\.0\.0\.1:\d+$/.test(origin)))
-    throw new Error("Untrusted Base RPC origin");
-  const response=await fetch(origin,{
-    method:"POST",headers:{"Content-Type":"application/json","User-Agent":"VM5-Base-USDC-Receipt-ReadOnly/1.0"},
-    body:JSON.stringify({jsonrpc:"2.0",id:1,method,params}),
-    signal:AbortSignal.timeout(8500),redirect:"error"
-  });
-  if(!response.ok)throw new Error("Base RPC unavailable");
-  if(Number(response.headers.get("content-length")||0)>MAX_RPC_BYTES)throw new Error("Base RPC oversized");
+function isTransientReadFailure(err) {
+  return err?.message==="Base RPC temporary unavailability";
+}
+async function oneBaseRpcRead(origin,method,params,transport) {
+  let response;
+  try {
+    response=await transport(origin,{
+      method:"POST",headers:{"Content-Type":"application/json","User-Agent":"VM5-Base-USDC-Receipt-ReadOnly/1.0"},
+      body:JSON.stringify({jsonrpc:"2.0",id:1,method,params}),
+      signal:AbortSignal.timeout(7000),redirect:"error"
+    });
+  }catch {
+    // A transport outage may use ONLY the pinned, independent official read-only
+    // backup; never retry a 403, a malformed receipt or a wrong chain.
+    throw new Error("Base RPC temporary unavailability");
+  }
+  if(response.status===429 || response.status>=500)
+    throw new Error("Base RPC temporary unavailability");
+  if(!response.ok)throw new Error("Base RPC response refused");
+  if(Number(response.headers.get("content-length")||0)>MAX_RPC_BYTES)
+    throw new Error("Base RPC oversized");
   const txt=await response.text();
   if(txt.length>MAX_RPC_BYTES)throw new Error("Base RPC response too large");
   const data=JSON.parse(txt);
+  if(data?.error?.code===-32005)throw new Error("Base RPC temporary unavailability");
   if(!data||typeof data!=="object"||data.error||!("result" in data))
     throw new Error("Invalid Base RPC envelope");
   return data.result;
+}
+export async function baseRpcRead(method,params,{rpcUrl,transport=fetch}={}) {
+  if(!["eth_chainId","eth_blockNumber","eth_getTransactionReceipt"].includes(method))
+    throw new Error("Refusing unapproved or mutating JSON-RPC method");
+  const origin=rpcUrl??process.env.BASE_RPC_URL??RPC_MAINNET;
+  const loopback=process.env.NODE_ENV==="test"&&/^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
+  if(origin!==RPC_MAINNET&&origin!==RPC_PUBLIC_BACKUP&&!loopback)
+    throw new Error("Untrusted Base RPC origin");
+  // Explicit test/production settings remain pinned. Only the default official
+  // public primary gets one independent backup; never rotate through arbitrary
+  // endpoints or retry a 4xx access denial.
+  const origins=origin===RPC_MAINNET?[RPC_MAINNET,RPC_PUBLIC_BACKUP]:[origin];
+  for(let i=0;i<origins.length;i++){
+    try {
+      return await oneBaseRpcRead(origins[i],method,params,transport);
+    }catch(error){
+      if(i+1<origins.length&&isTransientReadFailure(error))continue;
+      throw error;
+    }
+  }
+  throw new Error("Base RPC temporary unavailability");
 }
 export async function preflightBaseUSDCReceipt(params,read=baseRpcRead) {
   const chain=await read("eth_chainId",[]);
