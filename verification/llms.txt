@@ -14,7 +14,7 @@
 
 - GET /v1/sample — Redocly OpenAPI lint fixture.
 - GET /v1/csv-sample — synthetic CSV structural QA example; customer data not necessary.
-- GET /v1/invoice-reconcile-sample — FREE original four-invoice fictional Base native Circle USDC candidate report plus two synthetic input CSVs. No payment, no onchain verification.
+- GET /v1/invoice-reconcile-sample — PLANNED, NOT YET LIVE on Render (HTTP404 as checked 2026-10-20): a free invented four-invoice preview once an authorized deployment is actually completed. No payment or onchain verification.
 - GET /v1/lowpoly-sample — procedurally generated 3D asset preview.
 - GET /v1/glb-sample — synthetic glTF 2 geometry-report preview.
 - GET /v1/email-dns-sample — *fictional* MX/SPF/DMARC illustration, not a live domain test.
@@ -30,7 +30,7 @@ Payment asset: native Circle USDC on Base chain eip155:8453 (ERC-20 contract 0x8
 - GET /v1/x402-template — 0.010000 USDC. Original x402 v2 OpenAPI YAML starter/reference, as-is.
 - GET /v1/csv-report — 0.005000 USDC. Structured QA report for transparent synthetic CSV.
 - POST /v1/csv-preflight — 0.005000 USDC. Bounded buyer-supplied CSV structural QA; reject malformed input before charging. Do not submit personal or confidential data.
-- POST /v1/invoice-reconcile — 0.005000 USDC. Two NONCONFIDENTIAL Base invoice and SELF-REPORTED USDC Transfer CSV strings; flags duplicates, partial, pending, shared-wallet ambiguity and orphan events. Invalid data rejected BEFORE 402, free fictional sample above. Host receives the submitted CSV; for privacy use FREE browser-local version. No onchain finality, custody, accounting or paid customers claimed. Full buyer guide: https://github.com/livastic-vm5-primary-20260911/x402-openapi-lint/blob/main/docs/BASE_USDC_INVOICE_RECON_X402_BUYER_QUICKSTART_20261020.md
+- POST /v1/invoice-reconcile — SOURCE-READY ONLY, NOT YET LIVE or payable on public Render; intended price 0.005000 native Base USDC after a separately authorized deployment. Two NONCONFIDENTIAL Base invoice and SELF-REPORTED USDC Transfer CSV strings; flags duplicates, partial, pending, shared-wallet ambiguity and orphan events. Invalid data rejected BEFORE 402, free fictional sample above. Host receives the submitted CSV; for privacy use FREE browser-local version. No onchain finality, custody, accounting or paid customers claimed. Full buyer guide: https://github.com/livastic-vm5-primary-20260911/x402-openapi-lint/blob/main/docs/BASE_USDC_INVOICE_RECON_X402_BUYER_QUICKSTART_20261020.md
 - GET /v1/email-dns-preflight?domain=example.org — 0.005000 USDC. Public DNS MX/SPF/DMARC/A configuration; NOT mailbox existence or real email deliverability certification.
 - GET /v1/https-cert-preflight?domain=github.com — 0.005000 USDC. Public HTTPS TLS X.509 validity/issuer/hostname and local CA-chain status, bounded pinned globally routable IPv4 port 443 only; no HTTP request, IP/URL/customer private endpoint, revocation/CT audit or security certification. Free synthetic preview above; NEW product actual paying customers zero.
 - GET /v1/x402-preflight — 0.010000 USDC. Bounded public *unsigned* x402 v2 quote syntax analysis; optional public JSON/Base64 quote; DOES NOT validate seller identity or actual settlement.
