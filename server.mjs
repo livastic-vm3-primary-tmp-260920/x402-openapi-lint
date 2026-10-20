@@ -12,6 +12,7 @@ import {validateReceiptQuery,preflightBaseUSDCReceipt} from "./base-usdc-receipt
 import {parseGlbBase64, MAX_GLB_BYTES} from "./glb-analyzer.mjs";
 import {generateOriginalGlb} from "./procedural-lowpoly-generator.mjs";
 import {inspectCsv,validateCsvInput,DEMO_CSV,CSV_LIMITS} from "./csv-preflight.mjs";
+import {inspectWorkflow,PUBLIC_SYNTHETIC_YAML,MAX_INPUT_BYTES as WORKFLOW_MAX_BYTES} from "./workflow-risk/preflight.mjs";
 import {parsePublicQuote,evaluatePublicQuote,EXAMPLE_QUOTE,VERSION as VM3_QUOTE_VERSION} from "./quote-preflight.mjs";
 import {validatePublicDomain,auditEmailDns} from "./email-dns-preflight.mjs";
 import {inspectPublicTlsCertificate} from "./public-https-tls-preflight.mjs";
@@ -88,6 +89,12 @@ const documentation={
     purpose:"RFC4180-style CSV structural preflight for real buyer CSV bytes. Returns row/column counts, duplicate rows, type mismatches, missing cells and formula injection warnings; never echoes raw row cells or persists uploaded CSV.",
     schema:{csvText:"UTF8 CSV <=32kb",expectedColumns:"optional nonempty column-name array <=40"},
     limitations:"Not full spreadsheet compliance, data truth, threat scanning or GDPR certification; do not submit secrets, infrastructure/settlement log separately."},
+  paidWorkflowRisk:{method:"POST",path:"/v1/workflow-risk",priceUSDC:"0.20",network:NETWORK,
+    purpose:"Analyze one caller-supplied 48KB GitHub Actions YAML source for workflow security risk heuristics: action pins, PR head checkout, token permissions, interpolation and self-hosted-runner exposure, with optional source-linked SARIF. Static rules only; no workflow execution or remote repository access.",
+    schema:{workflowYaml:"A nonsecret GitHub Actions YAML string <=48000 UTF-8 bytes",filename:"optional ci.yml basename",includeSarif:"optional bool, default true"},
+    sample:"GET /v1/workflow-risk-sample",confirmedIndependentPaidCustomers:0,
+    source:"MIT original same-owner VM2 analyzer: https://github.com/livastic-vm2-primary-20260911/apify-workflow-guard",
+    limitations:"AI-assisted static findings may contain false positives/negatives. No security certification, KYC validation, private CI data or compliance warranty. Do not submit secrets, private client workflows or sensitive environment tokens."},
   paidCsvDemo:{method:"GET",path:"/v1/csv-report",priceUSDC:"0.005",network:NETWORK,
     purpose:"Deliver a full machine-readable integrity report of an original synthetic test CSV. No customer data, request inputs or special query; pays for structured ready-to-consume report, which can also be computed from disclosed public sample."},
   paidEmailDns:{method:"GET",path:"/v1/email-dns-preflight",priceUSDC:"0.005",network:NETWORK,
@@ -130,6 +137,20 @@ const documentation={
   uniqueExternalScoutBuyerWallets:1
 };
 const routes={
+  "POST /v1/workflow-risk":{
+    accepts:{scheme:"exact",price:"$0.20",network:NETWORK,payTo:PAY_TO},
+    description:"Paid original GitHub Actions YAML static workflow-risk heuristic report, optional SARIF. 48KB nonsecret input, only valid workflows reach the x402 payment request; no YAML execution, private repo access, penetration testing or certified security audit. Developed by the SAME one-human-owner VM2 under MIT; VM5 is merchant.",
+    mimeType:"application/json",
+    extensions:declareDiscoveryExtension({
+      method:"POST",bodyType:"json",
+      input:{workflowYaml:PUBLIC_SYNTHETIC_YAML,filename:"ci.yml",includeSarif:true},
+      inputSchema:{type:"object",additionalProperties:false,required:["workflowYaml"],
+        properties:{workflowYaml:{type:"string",maxLength:48000},filename:{type:"string",maxLength:94},includeSarif:{type:"boolean"}}},
+      output:{example:{ok:true,paid:true,chargedUSDC:"0.20",network:NETWORK,staticOnly:true,findingsTruncated:false,
+        workflowEvents:["pull_request"],counts:{high:0,medium:1,note:0},noWorkflowExecuted:true,
+        confirmedIndependentPaidCustomers:0}}
+    })
+  },
   "GET /v1/ping":{
     accepts:{scheme:"exact",price:"$0.001",network:NETWORK,payTo:PAY_TO},
     description:"Original low-price x402 v2 integration test: pay 0.001 native Circle Base USDC using your own eligible buyer wallet, and receive a machine-readable 200 response plus the x402 PAYMENT-RESPONSE header. Never submit a wallet seed or private key. Not independent finality proof or recurring user demand.",
@@ -323,6 +344,15 @@ app.get("/.well-known/x402-service.json",(_req,res)=>res.status(200).json({
 app.get("/llms.txt",(_req,res)=>res.status(200).type("text/plain; charset=utf-8").send(fs.readFileSync(path.resolve(DIR,"verification/llms.txt"),"utf8")));
 app.get("/health",(_req,res)=>res.json({ok:true,service:"vm5-openapi-x402",network:NETWORK,paidRoute:"POST /v1/lint",sampleRedoclyErrors:sampleReport.errors}));
 app.get("/v1/docs",(_req,res)=>res.json(documentation));
+app.get("/v1/workflow-risk-sample",(_req,res)=>{
+  const sample=inspectWorkflow({workflowYaml:PUBLIC_SYNTHETIC_YAML,filename:"ci.yml",includeSarif:false});
+  if(!sample.ok)return res.status(503).json({ok:false,error:"Synthetic workflow fixture unavailable."});
+  return res.status(200).json({exampleOnly:true,paid:false,chargedUSDC:"0",
+    sampleWorkflow:PUBLIC_SYNTHETIC_YAML,sampleReport:sample,
+    paidEndpoint:"POST /v1/workflow-risk",priceUSDC:"0.20",network:NETWORK,confirmedIndependentPaidCustomers:0,
+    source:"https://github.com/livastic-vm2-primary-20260911/apify-workflow-guard",
+    warning:"This is a publicly reproducible synthetic example. Purchase pays for hosted preflight on your own NONSECRET workflow, not security certification, runtime testing, unique IP or any prior external client order."});
+});
 app.get("/v1/email-dns-sample",(_req,res)=>res.status(200).json({
   ok:true,paid:false,chargedUSDC:"0",exampleOnly:true,
   sample:{kind:"public_email_dns_preflight",domain:"example.org",mxCount:1,spfPresent:true,dmarcPresent:true,dmarcPolicy:"reject",warnings:[],inspectedAtUTC:"FIXTURE_ONLY_NOT_LIVE_DNS"},
@@ -542,7 +572,7 @@ app.get(["/.well-known/x402","/.well-known/x402.json"],(req,res)=>{
   catch{return res.status(503).json({error:"Discovery host not available."});}
 });
 
-app.options(["/v1/lint","/v1/analyze-glb","/v1/csv-preflight"],(_req,res)=>res.status(204).end());
+app.options(["/v1/lint","/v1/analyze-glb","/v1/csv-preflight","/v1/workflow-risk"],(_req,res)=>res.status(204).end());
 
 const emailDnsRates=new Map();
 app.get("/v1/email-dns-preflight",async(req,res,next)=>{
@@ -654,6 +684,24 @@ app.get("/v1/csv-report",(req,res,next)=>{
 }));
 
 const csvRate=new Map();
+const workflowRate=new Map();
+app.post("/v1/workflow-risk",
+ express.json({limit:"65kb",type:["application/json","application/*+json"]}),(req,res,next)=>{
+   const now=Date.now(),ip=req.ip,old=workflowRate.get(ip);
+   const state=(!old||now-old.at>60000)?{at:now,count:0}:old;
+   state.count++;workflowRate.set(ip,state);
+   if(workflowRate.size>3000)for(const [key,v] of workflowRate)if(now-v.at>60000)workflowRate.delete(key);
+   if(state.count>(process.env.NODE_ENV==="test"?1000:12))return res.status(429).json({ok:false,charged:false,error:"Workflow preflight limited to 12 attempts/minute per IP."});
+   if(!req.is("application/json")&&!req.is("application/*+json"))return res.status(415).json({ok:false,charged:false,error:"Provide an application/json workflow object."});
+   const report=inspectWorkflow(req.body);
+   if(!report.ok)return res.status(400).json({ok:false,charged:false,error:report.reason});
+   res.locals.workflowReport=report;
+   next();
+ },payment,(_req,res)=>res.status(200).json({
+   ...res.locals.workflowReport,paid:true,chargedUSDC:"0.20",network:NETWORK,
+   product:"static_gha_yaml_risk_preflight",noWorkflowExecuted:true,confirmedIndependentPaidCustomers:0,
+   limitations:"MIT same-owner VM2 static heuristic analysis; NOT penetration testing, a security audit, legal certification, runtime CI check, factual code risk guarantee or exclusive source IP transfer."
+ }));
 app.post("/v1/csv-preflight",express.json({limit:"40kb",type:["application/json","application/*+json"]}),(req,res,next)=>{
   const now=Date.now(),ip=req.ip,previous=csvRate.get(ip);
   const count=(!previous||now-previous.at>60000)?{at:now,count:0}:previous;

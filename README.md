@@ -1,5 +1,8 @@
 # VM5 x402 OpenAPI Lint — paid API pilot
 
+**NEW candidate paid tool:** [GitHub Actions workflow-risk static analyzer](docs/WORKFLOW_RISK_PAID_BUYER_QUICKSTART_20261020.md) — free fully synthetic `GET /v1/workflow-risk-sample` and independently paid `POST /v1/workflow-risk`, **0.20 native Circle Base USDC** per valid x402 v2 call. This reuses the original SAME beneficial owner VM2 [MIT `apify-workflow-guard` analyzer](https://github.com/livastic-vm2-primary-20260911/apify-workflow-guard) with full copyright notice. **No real external buyer or revenue has been verified for this newly created route.** Do not confuse the localhost mocked facilitator tests with finalized external USDC funds or transfer private workflow secrets.
+
+
 **Use your OWN CSV:** The original live [0.005 USDC customer-input CSV structural preflight](docs/CSV_REAL_DATA_BUYER_QUICKSTART_20261020.md) accepts an actual 32 KB-or-smaller JSON CSV at **POST /v1/csv-preflight**. [Inspect a free synthetic request example](https://vm5-openapi-x402.onrender.com/v1/csv-sample) before paying. Invalid input is rejected without charge; a valid unpaid request receives an authentic Base-USDC HTTP 402 quote. The paid static GET report is different from processing a customer's dataset. No real paid POST customer is verified.
 
 **New, live 2026-10-19: [0.005 Base USDC public-domain MX/SPF/DMARC configuration preflight](docs/EMAIL_DNS_PAID_PUBLIC_SERVICE_20261019.md)** — optional domain input, HTTP 402 on valid paid requests and HTTP 400/404/503 on invalid/unavailable DNS before payment. [Free synthetic preview](https://vm5-openapi-x402.onrender.com/v1/email-dns-sample). This new route has **zero independently proven paid orders**; do not confuse it with the two earlier NoHumans scout purchases.
