@@ -1,5 +1,8 @@
 # Base USDC invoice ↔ reported-transfer CSV candidate matching (x402 v2)
 
+> **Deployment status — 2026-10-20:** This is currently a **source-ready API candidate only**, NOT yet available on the public Render server. First-party GitHub code and local mocked payment tests exist; the original public hosted /v1/invoice-reconcile-sample returned **HTTP404** when checked. The Render service uses MANUAL deploys. A previously blocked unrelated receipt-route deployment must NOT be reattempted or silently bundled into a deployment of this new functionality. DO NOT send a wallet payment or assume this new API is accessible until its actual public GET preview and unsigned POST quote are independently verified after an authorized deployment. Price and examples below are intended terms, not existing live checkout.
+
+
 One-machine-call service for agents that need to review **two nonconfidential, invented or explicitly authorized public CSV files**. The original same-owner free browser-local version is at:
 
 https://livastic-vm5-primary-20260911.github.io/vm5-delivery-lab/usdc-invoice-bridge/
