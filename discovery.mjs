@@ -91,7 +91,16 @@ export function makeDiscovery(origin) {
         operationId:"analyzeGitHubActionsWorkflowRisk",security:[{x402Payment:[]}],
         description:"Same one-human-owner VM2 original MIT analyzer, served via existing VM5 PayAI x402 merchant. Inspect a bounded 48,000 UTF-8 byte YAML text statically without running workflow code or fetching repositories. Optional SARIF findings. Not an audit, vulnerability certification, payout KYC or guarantee; no verified paid workflow-risk buyers.",
         "x-payment-info":workflowRiskPayInfo,
-        requestBody:{required:true,content:{"application/json":{schema:{type:"object",additionalProperties:false,required:["workflowYaml"],properties:{
+        requestBody:{required:true,content:{"application/json":{
+          // Fully invented NONSECRET request so machine buyers can reach the
+          // unsigned 0.20-USDC x402 HTTP402 challenge without guessing a
+          // required workflowYaml body. No paid customer report is implied.
+          example:{
+            workflowYaml:"name: Synthetic workflow-risk API discovery\non:\n  workflow_dispatch:\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Static sample only\n        run: echo synthetic-only\n",
+            filename:"synthetic-ci.yml",
+            includeSarif:false
+          },
+          schema:{type:"object",additionalProperties:false,required:["workflowYaml"],properties:{
           workflowYaml:{type:"string",maxLength:48000,description:"Nonsecret GitHub Actions YAML text, never run."},
           filename:{type:"string",maxLength:94,example:"ci.yml"},includeSarif:{type:"boolean",default:true}
         }}}}},
