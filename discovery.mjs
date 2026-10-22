@@ -71,6 +71,7 @@ export function makeDiscovery(origin) {
       }
     },
     paths:{
+      "/skill.md":{get:{summary:"Free buyer-facing x402 agent skill, TapeOut VM1 payout and public sample",operationId:"readX402AgentSkill",security:[],responses:{"200":{description:"Public Markdown client guide; no wallet/payment required."}}}},
       "/llms.txt":{get:{summary:"Free machine-readable API guide",operationId:"readMachineApiGuide",security:[],responses:{"200":{description:"Public plain-text tool, prices, samples and source links; no wallet/payment required."}}}},
       "/health":{get:{summary:"Free health check",operationId:"health",security:[],responses:{"200":{description:"Current service health."}}}},
       "/v1/docs":{get:{summary:"Free API documentation and payment terms",operationId:"readApiContract",security:[],responses:{"200":{description:"Public terms, recipient and schema."}}}},

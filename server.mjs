@@ -390,6 +390,7 @@ app.get("/.well-known/x402-service.json",(_req,res)=>res.status(200).json({
   payment:{address:PAY_TO,chain:"base",facilitator:FACILITATOR_URL},
   endpoint:"https://vm5-openapi-x402.onrender.com/v1/x402-template"
 }));
+app.get("/skill.md",(_req,res)=>res.status(200).type("text/markdown; charset=utf-8").send(fs.readFileSync(path.resolve(DIR,"verification/skill.md"),"utf8")));
 app.get("/llms.txt",(_req,res)=>res.status(200).type("text/plain; charset=utf-8").send(fs.readFileSync(path.resolve(DIR,"verification/llms.txt"),"utf8")));
 app.get("/health",(_req,res)=>res.json({ok:true,service:"vm5-openapi-x402",network:NETWORK,paidRoute:"POST /v1/lint",sampleRedoclyErrors:sampleReport.errors}));
 app.get("/v1/docs",(_req,res)=>res.json(documentation));
