@@ -17,6 +17,7 @@ import {inspectWorkflow,PUBLIC_SYNTHETIC_YAML,MAX_INPUT_BYTES as WORKFLOW_MAX_BY
 import {parsePublicQuote,evaluatePublicQuote,EXAMPLE_QUOTE,VERSION as VM3_QUOTE_VERSION} from "./quote-preflight.mjs";
 import {validatePublicDomain,auditEmailDns} from "./email-dns-preflight.mjs";
 import {inspectPublicTlsCertificate} from "./public-https-tls-preflight.mjs";
+import {getCurrentTapeoutEvidence,TAPEOUT_PAYOUT,TAPEOUT_PRICE_USDC} from "./tapeout/paid-report.mjs";
 
 const DIR=path.dirname(fileURLToPath(import.meta.url));
 const PORT=Number(process.env.PORT||8736);
@@ -53,6 +54,16 @@ const documentation={
   name:"VM5 OpenAPI Lint",
   version:"0.1.0",
   status:"LIVE — two genuine distinct paid-and-delivered x402 calls from the SAME independent NoHumans automated scout: template 0.010000 native Base USDC, CSV report 0.005000 native Base USDC; combined 0.015000 token received. No organic repeat human buyer or fiat cashout proven.",
+  paidTapeoutGenesisCpu:{
+    method:"GET",path:"/v1/tapeout-cpu0-report",priceUSDC:TAPEOUT_PRICE_USDC,
+    payTo:TAPEOUT_PAYOUT,network:NETWORK,
+    asset:"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    purpose:"Live, pinned-block read-only X Layer TapeOut genesis CPU/factory/market evidence, full machine-readable onchain fee, EIP-1967 implementation and seal diagnostics.",
+    request:"GET exactly this path with no query or body; free preflight computes complete RPC snapshot before x402 payment request, returns no paid report until valid settlement.",
+    freePreview:"GET /v1/tapeout-cpu0-sample",knownIndependentCustomers:0,
+    recipientNote:"This brand-new route pays the SAME original VM1 owner MetaMask on Base native USDC. All existing VM5 merchant product payouts are unchanged.",
+    limitations:"Public X Layer RPC observation, not audited security, transaction settlement, legal identity or financial advice. No independent paid call confirmed."
+  },
   paid:{
     method:"POST",
     path:"/v1/lint",
@@ -157,6 +168,20 @@ const routes={
       output:{example:{ok:true,paid:true,chargedUSDC:"0.20",network:NETWORK,staticOnly:true,findingsTruncated:false,
         workflowEvents:["pull_request"],counts:{high:0,medium:1,note:0},noWorkflowExecuted:true,
         confirmedIndependentPaidCustomers:0}}
+    })
+  },
+  "GET /v1/tapeout-cpu0-report":{
+    accepts:{scheme:"exact",price:"$0.005",network:NETWORK,payTo:TAPEOUT_PAYOUT},
+    description:"An original, genuinely live TapeOut genesis CPU/X Layer mainnet pinned-block data snapshot, first-party code open-source; paid structured report convenience with owner original VM1 MetaMask payTo, never a certificate of safety, wallet control or settlement.",
+    mimeType:"application/json",
+    extensions:declareDiscoveryExtension({
+      method:"GET",
+      output:{example:{
+        ok:true,paid:true,chargedUSDC:"0.005",network:NETWORK,
+        kind:"xlayer_tapeout_genesis_cpu_onchain_snapshot",
+        chainId:196,blockNumber:"73900000",cpuIndex:0,exampleOnly:true,
+        dataAtPinnedBlock:true,independentPaidBuyerReceipts:0
+      }}
     })
   },
   "GET /v1/ping":{
@@ -580,6 +605,39 @@ app.get("/v1/ping",(req,res,next)=>{
   paymentResponseHeader:"Inspect PAYMENT-RESPONSE after a valid x402 payment for the middleware's settlement response.",
   thirdPartyFinalityProof:false,
   limitations:"The merchant's payment-gated response is not a standalone on-chain finality audit, verified legal buyer identity, paid-invoice agreement, or guaranteed continuous service. No new independent customer is claimed until genuine outside final transfers are proven."
+}));
+// Free summary intentionally never embeds the current paid JSON report.
+app.get("/v1/tapeout-cpu0-sample",(_req,res)=>res.status(200).json({
+  ok:true,paid:false,chargedUSDC:"0",exampleOnly:true,
+  kind:"tapeout_genesis_onchain_structured_report_offer",
+  networkRead:"X Layer mainnet chainId196 pinned RPC, only public eth_call/storage reads",
+  paidGET:"/v1/tapeout-cpu0-report",
+  priceNativeBaseCircleUSDC:TAPEOUT_PRICE_USDC,
+  payTo:TAPEOUT_PAYOUT,chainIdForPayment:8453,chainIdForData:196,
+  knownIndependentPaidCustomers:0,
+  freeSelfService:"https://livastic-vm5-primary-20260911.github.io/tapeout-xlayer-integrity-lens/",
+  product:"Hosted machine-readable full factory, market, EIP-1967 control and genesis CPU token-supply snapshot, plus read-only warnings.",
+  legalCaveat:"No audit, oracle, wallet connection, gas, stable future price, buyer intent or purchase is implied. Do not pay if the free self-service meets your needs."
+}));
+app.get("/v1/tapeout-cpu0-report",async(req,res,next)=>{
+  if(req.originalUrl!=="/v1/tapeout-cpu0-report" ||
+     Object.keys(req.query).length || req.get("Content-Length") || req.get("Transfer-Encoding")){
+    return res.status(400).json({ok:false,charged:false,error:"Only the exact GET without query/body is accepted. No payment requested."});
+  }
+  try{
+    // Preflight ALL public RPC data before asking for any x402 payment.
+    // A failed/malformed/partial chain read results in 503 *without* a 402.
+    res.locals.tapeoutEvidence=await getCurrentTapeoutEvidence();
+    next();
+  }catch{
+    return res.status(503).json({ok:false,charged:false,error:"X Layer TapeOut pinned-block evidence temporarily unavailable. No payment requested."});
+  }
+},payment,(_req,res)=>res.status(200).json({
+  ...res.locals.tapeoutEvidence,
+  ok:true,paid:true,chargedUSDC:TAPEOUT_PRICE_USDC,
+  payoutRail:"Direct native Circle Base8453 USDC to the original VM1 owner MetaMask public receiving address",
+  verifiedThirdPartyPaidOrdersForThisRoute:0,
+  disclosure:"Buyer has expressly authorized the x402 middleware payment; this JSON reports public X Layer state, not the identity/independence of any buyer nor independent settlement finality."
 }));
 app.get("/v1/x402-template",validateOptionalTemplateFormat,echoCanonicalX402ChallengeOnTemplate,payment,(_req,res)=>res.status(200).json({
   ok:true,paid:true,chargedUSDC:"0.01",network:NETWORK,

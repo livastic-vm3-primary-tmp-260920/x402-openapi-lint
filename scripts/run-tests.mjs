@@ -60,6 +60,70 @@ const receiptRpc=http.createServer((req,res)=>{
 });
 receiptRpc.listen(0,"127.0.0.1");
 await once(receiptRpc,"listening");
+const xlayerFactory="0x1f09daefa827f02cbb40967cc91b259763760761";
+const xlayerMarket="0xd89f358c48a7B632c9845af2a02A32eB90DD75DB";
+const xlayerCpu="0x"+"11".repeat(20);
+const xlayerTransistor="0x"+"22".repeat(20);
+const xlayerOwner="0x"+"33".repeat(20);
+const xlayerWord=n=>"0x"+BigInt(n).toString(16).padStart(64,"0");
+const xlayerAddr=a=>xlayerWord(BigInt(a));
+const xlayerSelectors={
+ cpuCount:"0xa94da8a7",deployFee:"0xeb2a5d2c",protocolFee:"0xb0e21e8a",
+ isSealed:"0x631f9852",owner:"0x8da5cb5b",cpuAt:"0x4bc7cbbd",
+ feeBps:"0x24a9d853",nextListingId:"0xaaccf1ec",
+ nextId:"0x61b8ce8c",tapeoutFee:"0xadfb2b69",transistors:"0x6fbd1719",
+ minted:"0x4f02c420",supplyCap:"0x8f770ad0",
+ mintPrice:"0x6817c76c",creator:"0x02d05d3f"
+};
+const xlayerRpc=http.createServer((req,res)=>{
+  res.setHeader("Content-Type","application/json");
+  if(req.method!=="POST"){res.statusCode=405;res.end("{}");return;}
+  const parts=[];req.on("data",x=>parts.push(x));
+  req.on("end",()=>{
+    let d;try{d=JSON.parse(Buffer.concat(parts).toString());}catch{d=null;}
+    if(!d||!["eth_chainId","eth_blockNumber","eth_call","eth_getStorageAt"].includes(d.method)){
+      res.statusCode=403;res.end(JSON.stringify({error:"Unexpected test-only RPC"}));return;
+    }
+    let result="0x";
+    if(d.method==="eth_chainId")result="0xc4";
+    else if(d.method==="eth_blockNumber")result="0x8e8";
+    else if(d.method==="eth_getStorageAt")result=xlayerWord(0xabc);
+    else{
+      const [call,blockTag]=d.params||[];
+      const addr=(call?.to||"").toLowerCase(),sel=(call?.data||"").slice(0,10);
+      if(blockTag!=="0x8e8"){
+        res.end(JSON.stringify({jsonrpc:"2.0",id:d.id,error:{code:3,message:"Unpinned RPC block"}}));return;
+      }
+      if(addr===xlayerFactory.toLowerCase()){
+        if(sel===xlayerSelectors.cpuCount)result=xlayerWord(2);
+        else if(sel===xlayerSelectors.deployFee)result=xlayerWord(6600000000000000n);
+        else if(sel===xlayerSelectors.protocolFee)result=xlayerWord(660000000000000n);
+        else if(sel===xlayerSelectors.isSealed)result=xlayerWord(0);
+        else if(sel===xlayerSelectors.owner)result=xlayerAddr(xlayerOwner);
+        else if(sel===xlayerSelectors.cpuAt)result=xlayerAddr(xlayerCpu);
+      }else if(addr===xlayerMarket.toLowerCase()){
+        if(sel===xlayerSelectors.feeBps)result=xlayerWord(100);
+        else if(sel===xlayerSelectors.nextListingId)result=xlayerWord(4);
+        else if(sel===xlayerSelectors.isSealed)result=xlayerWord(0);
+        else if(sel===xlayerSelectors.owner)result=xlayerAddr(xlayerOwner);
+      }else if(addr===xlayerCpu.toLowerCase()){
+        if(sel===xlayerSelectors.nextId)result=xlayerWord(103);
+        else if(sel===xlayerSelectors.tapeoutFee)result=xlayerWord(1300000000000000n);
+        else if(sel===xlayerSelectors.transistors)result=xlayerAddr(xlayerTransistor);
+      }else if(addr===xlayerTransistor.toLowerCase()){
+        if(sel===xlayerSelectors.minted)result=xlayerWord(10);
+        else if(sel===xlayerSelectors.supplyCap)result=xlayerWord(100);
+        else if(sel===xlayerSelectors.mintPrice)result=xlayerWord(0);
+        else if(sel===xlayerSelectors.protocolFee)result=xlayerWord(660000000000000n);
+        else if(sel===xlayerSelectors.creator)result=xlayerAddr(xlayerOwner);
+      }
+    }
+    res.end(JSON.stringify({jsonrpc:"2.0",id:d.id,result}));
+  });
+});
+xlayerRpc.listen(0,"127.0.0.1");
+await once(xlayerRpc,"listening");
+
 const facilitator=http.createServer((req,res)=>{
   res.setHeader("Content-Type","application/json");
   if(req.method==="GET" && req.url==="/supported"){
@@ -80,7 +144,10 @@ const facilitator=http.createServer((req,res)=>{
       const valid=data?.x402Version===2 &&
         requirements?.network==="eip155:8453" &&
         (requirements?.amount==="1000" || requirements?.amount==="10000" || requirements?.amount==="5000" || requirements?.amount==="50000" || requirements?.amount==="200000") &&
-        requirements?.payTo?.toLowerCase()==="0x6b01efa0705e91a7aca54271510bf9e594717f34" &&
+        (
+          requirements?.payTo?.toLowerCase()==="0x6b01efa0705e91a7aca54271510bf9e594717f34" ||
+          (requirements?.amount==="5000" && requirements?.payTo?.toLowerCase()==="0x4e3106520e40af30870cafe78da1b1e7110ed98e")
+        ) &&
         marker==="0x"+"11".repeat(65);
       if(req.url==="/verify"){
         res.end(JSON.stringify({isValid:Boolean(valid),invalidReason:valid?undefined:"fixture_invalid_marker",payer:"0x"+"33".repeat(20)}));
@@ -100,7 +167,7 @@ await once(facilitator,"listening");
 const port=await freePort();
 const mockUrl="http://127.0.0.1:"+facilitator.address().port;
 const url="http://127.0.0.1:"+port;
-const env={...process.env,PORT:String(port),FACILITATOR_URL:mockUrl,NODE_ENV:"test",TEST_URL:url,BASE_RPC_URL:"http://127.0.0.1:"+receiptRpc.address().port};
+const env={...process.env,PORT:String(port),FACILITATOR_URL:mockUrl,NODE_ENV:"test",TEST_URL:url,BASE_RPC_URL:"http://127.0.0.1:"+receiptRpc.address().port,TAPEOUT_XLAYER_RPC_TEST_ONLY:"http://127.0.0.1:"+xlayerRpc.address().port};
 const backend=spawn(process.execPath,["server.mjs"],{cwd:new URL("../",import.meta.url),env,stdio:["ignore","pipe","pipe"]});
 let backendLog="";
 backend.stdout.on("data",x=>backendLog+=x.toString());
@@ -119,7 +186,7 @@ async function ready() {
 let code=1;
 try{
   await ready();
-  const tests=spawn(process.execPath,["--test","tests/lint.test.mjs","tests/base-usdc-receipt.test.mjs","tests/base-rpc-fallback.test.mjs","tests/discovery-marketplace-interop.test.mjs","tests/glb-analyzer.test.mjs","tests/glb-paid-route.test.mjs","tests/procedural-lowpoly-generator.test.mjs","tests/lowpoly-paid-route.test.mjs","tests/bazaar-cdp-validations.test.mjs","tests/first-actual-independent-sale.test.mjs","tests/csv-preflight.test.mjs","tests/csv-paid-route.test.mjs","tests/invoice-reconcile.test.mjs","tests/invoice-paid-route.test.mjs","tests/quote-preflight.test.mjs","tests/quote-paid-route.test.mjs","tests/email-dns-preflight.test.mjs","tests/email-dns-paid-route.test.mjs","tests/public-https-tls-preflight.test.mjs","tests/tls-certificate-paid-route.test.mjs","tests/llms-discoverability.test.mjs","tests/lumen-free-game-route.test.mjs","tests/x402-paid-ping001.test.mjs","tests/true402-merchant-manifest.test.mjs","tests/workflow-risk-paid-route.test.mjs"],{cwd:new URL("../",import.meta.url),env,stdio:"inherit"});
+  const tests=spawn(process.execPath,["--test","tests/lint.test.mjs","tests/base-usdc-receipt.test.mjs","tests/base-rpc-fallback.test.mjs","tests/discovery-marketplace-interop.test.mjs","tests/glb-analyzer.test.mjs","tests/glb-paid-route.test.mjs","tests/procedural-lowpoly-generator.test.mjs","tests/lowpoly-paid-route.test.mjs","tests/bazaar-cdp-validations.test.mjs","tests/first-actual-independent-sale.test.mjs","tests/csv-preflight.test.mjs","tests/csv-paid-route.test.mjs","tests/invoice-reconcile.test.mjs","tests/invoice-paid-route.test.mjs","tests/quote-preflight.test.mjs","tests/quote-paid-route.test.mjs","tests/email-dns-preflight.test.mjs","tests/email-dns-paid-route.test.mjs","tests/public-https-tls-preflight.test.mjs","tests/tls-certificate-paid-route.test.mjs","tests/llms-discoverability.test.mjs","tests/lumen-free-game-route.test.mjs","tests/x402-paid-ping001.test.mjs","tests/true402-merchant-manifest.test.mjs","tests/workflow-risk-paid-route.test.mjs","tests/tapeout-xlayer-paid-route.test.mjs","tests/tapeout-core.test.mjs","tests/tapeout-rpc.test.mjs"],{cwd:new URL("../",import.meta.url),env,stdio:"inherit"});
   const [exit]=await once(tests,"close");
   code=exit??1;
 } catch(e){console.error(e.stack||e);code=1;}
@@ -127,5 +194,6 @@ finally{
   backend.kill("SIGTERM");
   facilitator.close();
   receiptRpc.close();
+  xlayerRpc.close();
 }
 process.exitCode=code;
