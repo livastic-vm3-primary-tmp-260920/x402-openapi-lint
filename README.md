@@ -244,3 +244,32 @@ Existing price, seller wallet, Base8453 native Circle USDC token, x402 exact pay
 
 
 NEW 2026-10-23 — independent read-only X Layer TapeOut genesis CPU on-chain snapshot (no buyer yet): FREE GET /v1/tapeout-cpu0-sample; paid GET /v1/tapeout-cpu0-report quotes exactly 0.005 native Circle USDC on Base8453 to the **original owner VM1 MetaMask** 0x4e3106520E40af30870caFE78da1B1e7110eD98E. Existing x402 products still use separate former VM5 merchant payTo, unchanged. Complete pinned public X Layer state is computed before quote; errors yield no payment request. Paid response after genuine buyer authorization is structured JSON, not a security audit or guarantee of custody/settlement. Free full self-serve explorer: https://livastic-vm5-primary-20260911.github.io/tapeout-xlayer-integrity-lens/ . No independent paid customers verified for this new route.
+
+
+### Settlement receipt observability for the original VM1-paid TapeOut route
+
+The original seller's single GET /v1/tapeout-cpu0-report includes a
+**merchant-private, read-only** receipt observer in tapeout/settlement-audit.mjs.
+After a response finishes, an HTTP 200 with a canonical x402 PAYMENT-RESPONSE
+indicating success:true, Base eip155:8453 and a well-formed public transaction
+hash generates a short [tapeout-facilitator-receipt] line in the owner's
+authenticated Render application logs. It includes only product path,
+public transaction hash, network, advertised nominal price, and explicit
+unverified finality/buyer flags. It never logs signatures, buyer IP/identity,
+payment nonce, full headers, or request bodies. It is disabled in NODE_ENV=test,
+so fake local facilitator hashes cannot enter real income logs. It creates no
+public customer or receipt-query endpoint.
+
+**A facilitator-reported successful payment is not independently verified
+beneficiary finality or a new unique external customer.** Any financial ledger
+must match the public hash plus a unique token Transfer log index, the native
+Circle Base USDC contract, the original VM1 payTo, exact amount, chain, finality,
+and payer independence using a permitted reconciliation path; never double-book
+the same receipt or older already-counted customer funds.
+
+This is prospective only. Earlier on 23 October the PayAI public resource
+stats reported one settlement in the past 24 hours at around 09:19 KST for
+this route, but did not expose a unique tx hash. Adding this observer later
+cannot reconstruct that past transfer or prove beneficiary receipt. The
+payment middleware, facilitator, 0.005 USDC price, 14 existing paid resources
+and all original wallet recipients remain unchanged.

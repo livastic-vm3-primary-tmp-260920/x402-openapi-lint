@@ -18,6 +18,7 @@ import {parsePublicQuote,evaluatePublicQuote,EXAMPLE_QUOTE,VERSION as VM3_QUOTE_
 import {validatePublicDomain,auditEmailDns} from "./email-dns-preflight.mjs";
 import {inspectPublicTlsCertificate} from "./public-https-tls-preflight.mjs";
 import {getCurrentTapeoutEvidence,TAPEOUT_PAYOUT,TAPEOUT_PRICE_USDC} from "./tapeout/paid-report.mjs";
+import {summarizeTapeoutSettlement,TAPEOUT_RECEIPT_PATH} from "./tapeout/settlement-audit.mjs";
 
 const DIR=path.dirname(fileURLToPath(import.meta.url));
 const PORT=Number(process.env.PORT||8736);
@@ -620,6 +621,24 @@ app.get("/v1/tapeout-cpu0-sample",(_req,res)=>res.status(200).json({
   product:"Hosted machine-readable full factory, market, EIP-1967 control and genesis CPU token-supply snapshot, plus read-only warnings.",
   legalCaveat:"No audit, oracle, wallet connection, gas, stable future price, buyer intent or purchase is implied. Do not pay if the free self-service meets your needs."
 }));
+// Merchant-only non-sensitive receipt observation for FUTURE paid TapeOut calls.
+// Executes AFTER a request finishes and NEVER writes headers, changes checkout,
+// reads chain logs, or trusts mock/test-only transactions as real receipts.
+// Keep this strictly limited to the original VM1-paid TapeOut SKU.
+app.use(TAPEOUT_RECEIPT_PATH,(req,res,next)=>{
+  if(process.env.NODE_ENV!=="test"){
+    res.once("finish",()=>{
+      const receipt=summarizeTapeoutSettlement({
+        method:req.method,
+        path:req.originalUrl,
+        statusCode:res.statusCode,
+        paymentResponse:res.getHeader("PAYMENT-RESPONSE")
+      });
+      if(receipt)console.info("[tapeout-facilitator-receipt]",JSON.stringify(receipt));
+    });
+  }
+  next();
+});
 app.get("/v1/tapeout-cpu0-report",async(req,res,next)=>{
   if(req.originalUrl!=="/v1/tapeout-cpu0-report" ||
      Object.keys(req.query).length || req.get("Content-Length") || req.get("Transfer-Encoding")){
