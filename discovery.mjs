@@ -292,7 +292,46 @@ export function makeDiscovery(origin) {
         description:"Distinct machine-readable change-only report compared to the existing paid one-block current-state snapshot. Reads real X Layer chain196 CPU0 factory, market, EIP-1967 implementations and token supplies at fixed October 23 history block and current pinned block. Complete reads are required BEFORE asking for buyer-signed Base native Circle USDC x402 v2 10000 atomic. Direct only to same original VM1 wallet as TapeOut snapshot. No query, body, private data, paid history retrieval, signing by merchant, unsafe RPC writes, or formal audit. This SKU has zero verified thirdparty paid orders at creation.",
         "x-payment-info":tapeoutDiffPayInfo,
         responses:{
-          "200":{description:"Paid changed-only comparison with baselineBlock, liveBlock, changed 20-field values and warnings. No customer financial audit.",headers:{"PAYMENT-RESPONSE":{schema:{type:"string"}}}},
+          "200":{
+            description:"Buyer-signed x402 payment unlocks TWO actually pinned X Layer RPC snapshots; returns just changed fields plus on-chain identity, limitations and full field count. No financial audit or guarantees.",
+            headers:{"PAYMENT-RESPONSE":{schema:{type:"string"}}},
+            content:{"application/json":{schema:{
+              type:"object",
+              required:["ok","paid","chargedUSDC","kind","schema","chainId","cpuIndex","network","baselineBlock","liveBlock","fieldsCompared","changes","changeCount","unchangedCount","warning","originalVM1PayoutAddress","independentOutsideBuyersForThisNewSKU"],
+              properties:{
+                ok:{type:"boolean",description:"True only after successful x402 middleware completion"},
+                paid:{type:"boolean",description:"True only in the payment-gated handler (not a separate wallet settlement attestation)"},
+                chargedUSDC:{type:"string",const:"0.01"},
+                kind:{type:"string",const:"xlayer_tapeout_cpu0_pinned_state_diff"},
+                schema:{type:"string",const:"TapeOutXLayerRiskLens/paid-diff-v1"},
+                chainId:{type:"integer",const:196},
+                network:{type:"string",const:"eip155:196",description:"X Layer data source, separate from Base eip155:8453 payment"},
+                cpuIndex:{type:"integer",const:0},
+                baselineBlock:{type:"string",pattern:"^[1-9][0-9]*$"},
+                liveBlock:{type:"string",pattern:"^[1-9][0-9]*$"},
+                fieldsCompared:{type:"integer",const:20},
+                changeCount:{type:"integer",minimum:0,maximum:20},
+                unchangedCount:{type:"integer",minimum:0,maximum:20},
+                changes:{type:"array",maxItems:20,items:{type:"object",additionalProperties:false,
+                  required:["field","label","before","after"],properties:{
+                    field:{type:"string",description:"Machine-readable dotted source field path"},
+                    label:{type:"string"},
+                    before:{type:"string",description:"Strictly validated and normalized historical on-chain value"},
+                    after:{type:"string",description:"Strictly validated and normalized latest on-chain value"}
+                  }}},
+                cpuIdentityChanged:{type:"boolean"},
+                warning:{type:"string",description:"This is not a formal audit, independent RPC consensus proof or buying advice."},
+                source:{type:"object",description:"Only public X Layer factory/market and pinned RPC read method metadata"},
+                olderFullSnapshotDiagnostics:{type:"array",items:{type:"object"}},
+                latestFullSnapshotDiagnostics:{type:"array",items:{type:"object"}},
+                noWalletKeysRequired:{type:"boolean"},
+                noTransactionSent:{type:"boolean"},
+                originalVM1PayoutAddress:{type:"string",pattern:"^0x[0-9a-fA-F]{40}$"},
+                independentOutsideBuyersForThisNewSKU:{type:"integer",const:0,description:"Initial creation-time baseline; not a real-time buyer count"},
+                disclosure:{type:"string"}
+              }
+            }}}
+          },
           "400":{description:"Unexpected query or request body, no payment."},
           "402":{description:"10000 atomic native Base Circle USDC to original VM1 receiving EVM address.",headers:{"PAYMENT-REQUIRED":{schema:{type:"string"}}}},
           "429":{description:"Rate limited without charge."},

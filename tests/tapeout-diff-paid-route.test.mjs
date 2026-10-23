@@ -33,6 +33,25 @@ function fakePayment(q,mark='11'){
  })).toString('base64');
 }
 
+test('The new separate paid product declares a useful complete original machine-readable JSON delivery schema before any buyer spends',()=>{
+ const operation=makeDiscovery('https://vm5-openapi-x402.onrender.com').spec.paths['/v1/tapeout-cpu0-diff'].get;
+ const json=operation.responses['200'].content['application/json'].schema;
+ assert.equal(json.type,'object');
+ for(const required of ['kind','schema','chainId','baselineBlock','liveBlock','fieldsCompared','changeCount','unchangedCount','changes','warning','originalVM1PayoutAddress','paid'])
+   assert.ok(json.required.includes(required),'Missing public required contract '+required);
+ const change=json.properties.changes;
+ assert.equal(change.type,'array');
+ assert.deepEqual(change.items.required,['field','label','before','after']);
+ assert.equal(json.properties.fieldsCompared.const,20);
+ assert.equal(json.properties.chargedUSDC.const,'0.01');
+ assert.equal(json.properties.network.const,'eip155:196');
+ assert.equal(operation['x-payment-info'].network,'eip155:8453');
+ assert.equal(operation['x-payment-info'].payTo.toLowerCase(),TAPEOUT_PAYOUT.toLowerCase());
+ assert.equal(operation['x-payment-info'].price.amount,DIFF_PRICE_USDC);
+ assert.ok(!JSON.stringify(json).includes('privateKey'));
+ assert.ok(!JSON.stringify(json).includes('walletSigner'));
+});
+
 test('Zero-cost public sample clearly distinguishes two-block historical SKU',async()=>{
  const r=await fetch(BASE+'/v1/tapeout-cpu0-diff-sample');
  assert.equal(r.status,200);
