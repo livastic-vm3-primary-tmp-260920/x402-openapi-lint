@@ -1,5 +1,17 @@
 # VM5 x402 OpenAPI Lint — paid API pilot
 
+## Live TapeOut x402 API — free preview, optional 0.005 USDC request
+
+**Buyer quickstart (verified live 2026-10-23):** [Free sample JSON](https://vm5-openapi-x402.onrender.com/v1/tapeout-cpu0-sample) (`GET`, HTTP 200), [free read-only X Layer explorer](https://livastic-vm5-primary-20260911.github.io/tapeout-xlayer-integrity-lens/), and [optional paid machine-readable CPU0 report](https://vm5-openapi-x402.onrender.com/v1/tapeout-cpu0-report) (`GET`, unsigned HTTP 402). The live advertised quote is **0.005000 native Circle USDC per paid call on Base mainnet (eip155:8453)**, payable only with a separate buyer-signed x402 authorization to the merchant's existing public VM1 EVM recipient. Inspect the current `PAYMENT-REQUIRED` header before authorizing; do not paste wallet secrets or payment signatures into issues.
+
+```sh
+curl -i https://vm5-openapi-x402.onrender.com/v1/tapeout-cpu0-sample
+curl -i https://vm5-openapi-x402.onrender.com/v1/tapeout-cpu0-report
+```
+
+**Commercial and verification disclosure:** This seller-operated product can financially benefit the same beneficial owner as the public article and explorer. Free examples require no wallet. An HTTP 402 quote, catalog listing, facilitator-reported payment or local mock payment is **not** independent evidence of customer demand or finalized funds received. One recent facilitator counter was not independently reconciled to a unique on-chain USDC transfer for this particular route; no separately attributable real buyer sale is asserted. The API gives public-chain observations and limitations, **not** a security audit or investment recommendation.
+
+
 **NEW source-only candidate — NOT YET DEPLOYED TO RENDER (verified HTTP 404 on 2026-10-20 UTC).** USDC invoice/transfer CSV exceptions. [Exact original machine-buyer quickstart](docs/BASE_USDC_INVOICE_RECON_X402_BUYER_QUICKSTART_20261020.md) documents FREE invented `GET /v1/invoice-reconcile-sample` and independently buyer-signed x402 **0.005 native Base Circle USDC** `POST /v1/invoice-reconcile` on two expressly authorized NONCONFIDENTIAL CSVs. It identifies reported duplicate transactions, partial and pending rows, shared wallet ambiguity, and orphan transfers. Hosted means buyer input is transmitted; users with confidential data should prefer the existing separate FREE offline browser product. This does NOT independently verify real blockchain finality, invoice payment, user account ownership or tax. **No external buyer payment of this new product has yet been confirmed; do not attempt payment until live deployed route, quote and recipient are independently verified.** Public original source derives from the same-owner MIT local CSV code, 190 test suite checks including locally simulated x402 paid HTTP200 without USDC movement.
 
 
