@@ -637,6 +637,39 @@ function echoCanonicalX402ChallengeOnTapeoutDiff(_req,res,next){
   next();
 }
 
+// Read-only discovery compatibility for ONE previously genuinely paid VM1
+// TapeOut report SKU. The canonical x402 v2 PAYMENT-REQUIRED header remains
+// the sole source of truth. Never modify verify/settle, price, or recipient.
+function echoCanonicalX402ChallengeOnTapeoutReport(_req,res,next){
+  const send=res.send;
+  res.send=function(body){
+    const wire=res.getHeader("PAYMENT-REQUIRED");
+    if(res.statusCode===402 && typeof wire==="string" && wire.length<20000){
+      try{
+        const quote=JSON.parse(Buffer.from(wire,"base64").toString("utf8"));
+        const a=quote?.accepts;
+        const resource=new URL(quote?.resource?.url);
+        if(quote?.x402Version===2 &&
+           resource.pathname==="/v1/tapeout-cpu0-report" &&
+           !resource.search && !resource.hash &&
+           Array.isArray(a) && a.length===1 &&
+           a[0]?.scheme==="exact" && a[0]?.network===NETWORK &&
+           a[0]?.payTo?.toLowerCase()===TAPEOUT_PAYOUT.toLowerCase() &&
+           a[0]?.asset?.toLowerCase()==="0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" &&
+           a[0]?.amount==="5000"){
+          res.setHeader("X-Payment-Required",wire);
+          res.setHeader("Access-Control-Expose-Headers",
+                        "PAYMENT-REQUIRED,X-Payment-Required,PAYMENT-RESPONSE");
+          res.type("json");
+          return send.call(res,JSON.stringify(quote));
+        }
+      }catch { /* Fail closed: ordinary unpaid x402 response remains. */ }
+    }
+    return send.call(res,body);
+  };
+  next();
+}
+
 function validateOptionalTemplateFormat(req,res,next){
   const format=req.get("X-Template-Format");
   if(Object.keys(req.query).length ||
@@ -704,7 +737,7 @@ app.get("/v1/tapeout-cpu0-report",async(req,res,next)=>{
   }catch{
     return res.status(503).json({ok:false,charged:false,error:"X Layer TapeOut pinned-block evidence temporarily unavailable. No payment requested."});
   }
-},payment,(_req,res)=>res.status(200).json({
+},echoCanonicalX402ChallengeOnTapeoutReport,payment,(_req,res)=>res.status(200).json({
   ...res.locals.tapeoutEvidence,
   ok:true,paid:true,chargedUSDC:TAPEOUT_PRICE_USDC,
   payoutRail:"Direct native Circle Base8453 USDC to the original VM1 owner MetaMask public receiving address",

@@ -61,6 +61,32 @@ test('Valid request: complete fake X Layer pinned snapshot preflight then exact 
  assert.equal(r.headers.get('PAYMENT-RESPONSE'),null);
 });
 
+test('Public 0.005 BaseUSDC report mirrors ONLY canonical original VM1 quote for firstparty discovery, no signing or settlement',async()=>{
+ const r=await fetch(BASE+'/v1/tapeout-cpu0-report');
+ assert.equal(r.status,402);
+ const wire=r.headers.get('payment-required');
+ assert.ok(wire);
+ assert.equal(r.headers.get('x-payment-required'),wire);
+ assert.ok(r.headers.get('access-control-expose-headers').includes('X-Payment-Required'));
+ const fromHeader=JSON.parse(Buffer.from(wire,'base64').toString('utf8'));
+ const fromBody=await r.json();
+ assert.deepEqual(fromBody,fromHeader);
+ assert.equal(fromBody.x402Version,2);
+ assert.equal(new URL(fromBody.resource.url).pathname,'/v1/tapeout-cpu0-report');
+ assert.equal(fromBody.accepts.length,1);
+ assert.equal(fromBody.accepts[0].amount,'5000');
+ assert.equal(fromBody.accepts[0].network,'eip155:8453');
+ assert.equal(fromBody.accepts[0].payTo.toLowerCase(),TAPEOUT_PAYOUT.toLowerCase());
+ assert.equal(fromBody.accepts[0].asset.toLowerCase(),CIRCLE);
+ assert.equal(fromBody.extensions.bazaar.info.input.method,'GET');
+ assert.equal(r.headers.get('payment-response'),null);
+ const bad=await fetch(BASE+'/v1/tapeout-cpu0-report?unexpected=1');
+ assert.equal(bad.status,400);
+ assert.equal(bad.headers.get('payment-required'),null);
+ assert.equal(bad.headers.get('x-payment-required'),null);
+ assert.equal((await bad.json()).charged,false);
+});
+
 test('Bad query forbidden before quote or settlement',async()=>{
  for(const item of [
    '/v1/tapeout-cpu0-report?index=2',
