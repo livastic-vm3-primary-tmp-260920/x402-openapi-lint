@@ -66,6 +66,26 @@ test('Zero-cost public sample clearly distinguishes two-block historical SKU',as
  assert.ok(d.freeAlternative.includes('tapeout-xlayer-integrity-lens'));
 });
 
+test('Legacy directory can read only the canonical public VM1 diff quote, without payment or altered settlement',async()=>{
+ const r=await fetch(BASE+'/v1/tapeout-cpu0-diff');
+ assert.equal(r.status,402);
+ const encoded=r.headers.get('payment-required');
+ assert.ok(encoded);
+ assert.equal(r.headers.get('x-payment-required'),encoded);
+ assert.ok(r.headers.get('access-control-expose-headers').includes('X-Payment-Required'));
+ const fromHeader=JSON.parse(Buffer.from(encoded,'base64').toString('utf8'));
+ const fromBody=await r.json();
+ assert.deepEqual(fromBody,fromHeader);
+ assert.equal(fromBody.accepts[0].payTo.toLowerCase(),TAPEOUT_PAYOUT.toLowerCase());
+ assert.equal(fromBody.accepts[0].amount,'10000');
+ assert.equal(fromBody.accepts[0].network,'eip155:8453');
+ assert.equal(r.headers.get('payment-response'),null);
+ const bad=await fetch(BASE+'/v1/tapeout-cpu0-diff?unexpected=1');
+ assert.equal(bad.status,400);
+ assert.equal(bad.headers.get('x-payment-required'),null);
+ assert.equal(bad.headers.get('payment-required'),null);
+});
+
 test('Preflight complete two local X Layer pinned snapshots THEN an unsigned 0.01 BaseUSDC x402 quote to VM1',async()=>{
  const r=await fetch(BASE+'/v1/tapeout-cpu0-diff');
  assert.equal(r.status,402);
