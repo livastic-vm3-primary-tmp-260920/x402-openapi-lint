@@ -91,7 +91,7 @@ const xlayerRpc=http.createServer((req,res)=>{
     else{
       const [call,blockTag]=d.params||[];
       const addr=(call?.to||"").toLowerCase(),sel=(call?.data||"").slice(0,10);
-      if(blockTag!=="0x8e8"){
+      if(blockTag!=="0x8e8" && blockTag!=="0x8e7"){
         res.end(JSON.stringify({jsonrpc:"2.0",id:d.id,error:{code:3,message:"Unpinned RPC block"}}));return;
       }
       if(addr===xlayerFactory.toLowerCase()){
@@ -102,7 +102,7 @@ const xlayerRpc=http.createServer((req,res)=>{
         else if(sel===xlayerSelectors.owner)result=xlayerAddr(xlayerOwner);
         else if(sel===xlayerSelectors.cpuAt)result=xlayerAddr(xlayerCpu);
       }else if(addr===xlayerMarket.toLowerCase()){
-        if(sel===xlayerSelectors.feeBps)result=xlayerWord(100);
+        if(sel===xlayerSelectors.feeBps)result=xlayerWord(blockTag==="0x8e7"?95:100);
         else if(sel===xlayerSelectors.nextListingId)result=xlayerWord(4);
         else if(sel===xlayerSelectors.isSealed)result=xlayerWord(0);
         else if(sel===xlayerSelectors.owner)result=xlayerAddr(xlayerOwner);
@@ -146,7 +146,7 @@ const facilitator=http.createServer((req,res)=>{
         (requirements?.amount==="1000" || requirements?.amount==="10000" || requirements?.amount==="5000" || requirements?.amount==="50000" || requirements?.amount==="200000") &&
         (
           requirements?.payTo?.toLowerCase()==="0x6b01efa0705e91a7aca54271510bf9e594717f34" ||
-          (requirements?.amount==="5000" && requirements?.payTo?.toLowerCase()==="0x4e3106520e40af30870cafe78da1b1e7110ed98e")
+          ((requirements?.amount==="5000" || requirements?.amount==="10000") && requirements?.payTo?.toLowerCase()==="0x4e3106520e40af30870cafe78da1b1e7110ed98e")
         ) &&
         marker==="0x"+"11".repeat(65);
       if(req.url==="/verify"){
@@ -186,7 +186,7 @@ async function ready() {
 let code=1;
 try{
   await ready();
-  const tests=spawn(process.execPath,["--test","tests/catalog-readonly.test.mjs","tests/lint.test.mjs","tests/base-usdc-receipt.test.mjs","tests/base-rpc-fallback.test.mjs","tests/discovery-marketplace-interop.test.mjs","tests/glb-analyzer.test.mjs","tests/glb-paid-route.test.mjs","tests/procedural-lowpoly-generator.test.mjs","tests/lowpoly-paid-route.test.mjs","tests/bazaar-cdp-validations.test.mjs","tests/first-actual-independent-sale.test.mjs","tests/csv-preflight.test.mjs","tests/csv-paid-route.test.mjs","tests/invoice-reconcile.test.mjs","tests/invoice-paid-route.test.mjs","tests/quote-preflight.test.mjs","tests/quote-paid-route.test.mjs","tests/email-dns-preflight.test.mjs","tests/email-dns-paid-route.test.mjs","tests/public-https-tls-preflight.test.mjs","tests/tls-certificate-paid-route.test.mjs","tests/llms-discoverability.test.mjs","tests/lumen-free-game-route.test.mjs","tests/x402-paid-ping001.test.mjs","tests/true402-merchant-manifest.test.mjs","tests/workflow-risk-paid-route.test.mjs","tests/tapeout-xlayer-paid-route.test.mjs","tests/tapeout-settlement-audit.test.mjs","tests/tapeout-core.test.mjs","tests/tapeout-rpc.test.mjs"],{cwd:new URL("../",import.meta.url),env,stdio:"inherit"});
+  const tests=spawn(process.execPath,["--test","tests/tapeout-diff-paid-route.test.mjs","tests/catalog-readonly.test.mjs","tests/lint.test.mjs","tests/base-usdc-receipt.test.mjs","tests/base-rpc-fallback.test.mjs","tests/discovery-marketplace-interop.test.mjs","tests/glb-analyzer.test.mjs","tests/glb-paid-route.test.mjs","tests/procedural-lowpoly-generator.test.mjs","tests/lowpoly-paid-route.test.mjs","tests/bazaar-cdp-validations.test.mjs","tests/first-actual-independent-sale.test.mjs","tests/csv-preflight.test.mjs","tests/csv-paid-route.test.mjs","tests/invoice-reconcile.test.mjs","tests/invoice-paid-route.test.mjs","tests/quote-preflight.test.mjs","tests/quote-paid-route.test.mjs","tests/email-dns-preflight.test.mjs","tests/email-dns-paid-route.test.mjs","tests/public-https-tls-preflight.test.mjs","tests/tls-certificate-paid-route.test.mjs","tests/llms-discoverability.test.mjs","tests/lumen-free-game-route.test.mjs","tests/x402-paid-ping001.test.mjs","tests/true402-merchant-manifest.test.mjs","tests/workflow-risk-paid-route.test.mjs","tests/tapeout-xlayer-paid-route.test.mjs","tests/tapeout-settlement-audit.test.mjs","tests/tapeout-core.test.mjs","tests/tapeout-rpc.test.mjs"],{cwd:new URL("../",import.meta.url),env,stdio:"inherit"});
   const [exit]=await once(tests,"close");
   code=exit??1;
 } catch(e){console.error(e.stack||e);code=1;}

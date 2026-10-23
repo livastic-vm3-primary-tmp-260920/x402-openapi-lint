@@ -19,6 +19,7 @@ import {parsePublicQuote,evaluatePublicQuote,EXAMPLE_QUOTE,VERSION as VM3_QUOTE_
 import {validatePublicDomain,auditEmailDns} from "./email-dns-preflight.mjs";
 import {inspectPublicTlsCertificate} from "./public-https-tls-preflight.mjs";
 import {getCurrentTapeoutEvidence,TAPEOUT_PAYOUT,TAPEOUT_PRICE_USDC} from "./tapeout/paid-report.mjs";
+import {getLiveTapeoutStateDiff,DIFF_PRICE_USDC,DIFF_BASELINE_BLOCK} from "./tapeout/diff-report.mjs";
 import {summarizeTapeoutSettlement,TAPEOUT_RECEIPT_PATH} from "./tapeout/settlement-audit.mjs";
 
 const DIR=path.dirname(fileURLToPath(import.meta.url));
@@ -183,6 +184,22 @@ const routes={
         kind:"xlayer_tapeout_genesis_cpu_onchain_snapshot",
         chainId:196,blockNumber:"73900000",cpuIndex:0,exampleOnly:true,
         dataAtPinnedBlock:true,independentPaidBuyerReceipts:0
+      }}
+    })
+  },
+  "GET /v1/tapeout-cpu0-diff":{
+    accepts:{scheme:"exact",price:"$0.01",network:NETWORK,payTo:TAPEOUT_PAYOUT},
+    description:"Historical change-only TapeOut X Layer state diff (fixed publicly verified October 23 block vs recent pinned live state). Exactly 20 distinct public CPU0 factory, market, token and owner fields; native Circle Base USDC 0.01 to original VM1 MetaMask. Does not sign, submit, certify or promise changes.",
+    mimeType:"application/json",
+    extensions:declareDiscoveryExtension({
+      method:"GET",
+      output:{example:{
+        ok:true,paid:true,chargedUSDC:"0.01",network:"eip155:8453",
+        kind:"xlayer_tapeout_cpu0_pinned_state_diff",chainId:196,
+        baselineBlock:DIFF_BASELINE_BLOCK.toString(),liveBlock:"73950000",
+        fieldsCompared:20,changeCount:1,unchangedCount:19,
+        changes:[{field:"market.nextListingId",label:"Next market listing ID",before:"3",after:"4"}],
+        exampleOnly:true,newIndependentPaidCustomersForDiff:0
       }}
     })
   },
@@ -659,6 +676,39 @@ app.get("/v1/tapeout-cpu0-report",async(req,res,next)=>{
   payoutRail:"Direct native Circle Base8453 USDC to the original VM1 owner MetaMask public receiving address",
   verifiedThirdPartyPaidOrdersForThisRoute:0,
   disclosure:"Buyer has expressly authorized the x402 middleware payment; this JSON reports public X Layer state, not the identity/independence of any buyer nor independent settlement finality."
+}));
+// Distinct paid historical change-set SKU. No buyer parameters, no payment if
+// one of the two pinned RPC snapshots is incomplete or the chain is unavailable.
+app.get("/v1/tapeout-cpu0-diff-sample",(_req,res)=>res.status(200).json({
+  ok:true,paid:false,chargedUSDC:"0",exampleOnly:true,
+  kind:"tapeout_cpu0_two_pinned_blocks_change_only_offer",
+  paidGET:"/v1/tapeout-cpu0-diff",priceNativeBaseCircleUSDC:DIFF_PRICE_USDC,
+  chainIdForData:196,chainIdForPayment:8453,payTo:TAPEOUT_PAYOUT,
+  baselineBlock:DIFF_BASELINE_BLOCK.toString(),fieldsCompared:20,
+  noWalletOrSignatureRequiredToInspectOffer:true,
+  exampleChange:{field:"market.nextListingId",before:"3",after:"4",fictional:true},
+  scope:"Only compare X Layer TapeOut CPU0 factory, market, proxy, owner, and token fields at a fixed historical and a pinned recent block; no intervening-block completeness claims.",
+  freeAlternative:"https://livastic-vm5-primary-20260911.github.io/tapeout-xlayer-integrity-lens/",
+  caveat:"Not an audit, oracle, wallet verification, change-alert subscription, genuine customer receipt or guaranteed availability. Pay only for convenience if free explorer does not suffice."
+}));
+app.get("/v1/tapeout-cpu0-diff",async(req,res,next)=>{
+  if(req.originalUrl!=="/v1/tapeout-cpu0-diff" ||
+    Object.keys(req.query).length || req.get("Content-Length") || req.get("Transfer-Encoding"))
+    return res.status(400).json({ok:false,charged:false,error:"Only the exact GET without a query or body is supported. No payment requested."});
+  try{
+    // Complete and validate both historical & current X Layer RPC blocks
+    // BEFORE middleware can return the 0.01-USDC x402 payment requirement.
+    res.locals.tapeoutDiffEvidence=await getLiveTapeoutStateDiff();
+    next();
+  }catch{
+    return res.status(503).json({ok:false,charged:false,error:"Two complete pinned X Layer snapshots unavailable. No payment requested."});
+  }
+},payment,(_req,res)=>res.status(200).json({
+  ...res.locals.tapeoutDiffEvidence,
+  ok:true,paid:true,chargedUSDC:DIFF_PRICE_USDC,
+  originalVM1PayoutAddress:TAPEOUT_PAYOUT,
+  independentOutsideBuyersForThisNewSKU:0,
+  disclosure:"The payment-gated response contains public RPC differences, not independent chain finality, independent buyer identity, a certified audit or an investment signal."
 }));
 app.get("/v1/x402-template",validateOptionalTemplateFormat,echoCanonicalX402ChallengeOnTemplate,payment,(_req,res)=>res.status(200).json({
   ok:true,paid:true,chargedUSDC:"0.01",network:NETWORK,

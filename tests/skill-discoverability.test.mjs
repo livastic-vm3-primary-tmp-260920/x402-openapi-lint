@@ -17,13 +17,13 @@ test("public agent skill guides a zero-spend, genuine Base native Circle USDC Ta
   assert.match(guide,/No independent paid customer purchase/i);
   assert.doesNotMatch(guide,/-----BEGIN .*PRIVATE KEY-----|sk_(?:live|test)_/i);
 });
-test("OpenAPI declares free skill and preserves original 14 paid x402 resources",()=>{
+test("OpenAPI declares free skill and preserves original 14 paid x402 resources plus distinct new 15th",()=>{
   const d=makeDiscovery("https://vm5-openapi-x402.onrender.com");
   const op=d.spec.paths["/skill.md"]?.get;
   assert.ok(op);
   assert.deepEqual(op.security,[]);
   assert.ok(op.responses["200"]);
-  assert.equal(d.wellKnown.resources.length,14);
+  assert.equal(d.wellKnown.resources.length,15);
   assert.ok(!d.wellKnown.resources.some(s=>s.endsWith("/skill.md")));
   const report=d.spec.paths["/v1/tapeout-cpu0-report"].get;
   assert.equal(report["x-payment-info"].payTo,OWNER);

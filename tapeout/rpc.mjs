@@ -54,10 +54,12 @@ export class PublicRpc {
   const out=await this.request('eth_getStorageAt',[address,IMPL_SLOT,block]);
   return addressFromStorage(out);
  }
- async snapshot(index=0){
+ async snapshot(index=0,atBlock=null){
   const chainId=Number(BigInt(await this.request('eth_chainId')));
   if(BigInt(chainId)!==CHAIN_ID) throw new Error('Wrong RPC chain ID: '+chainId);
-  const blockTag=await this.request('eth_blockNumber');
+  if(atBlock!==null && (typeof atBlock!=='bigint' || atBlock<=0n || atBlock>=(1n<<64n)))
+    throw new Error('Pinned historical block must be a positive 64-bit bigint');
+  const blockTag=atBlock===null?await this.request('eth_blockNumber'):'0x'+atBlock.toString(16);
   if(!/^0x[0-9a-f]+$/i.test(blockTag)) throw new Error('Bad block tag');
   const at=blockTag;
   const failed=[];
