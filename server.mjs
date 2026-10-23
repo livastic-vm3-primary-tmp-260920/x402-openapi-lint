@@ -8,6 +8,7 @@ import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { declareDiscoveryExtension, bazaarResourceServerExtension } from "@x402/extensions/bazaar";
 import {parseAndGuardSpec,lintSpec,REDOCLY_VERSION,LIMIT_BYTES} from "./validator.mjs";
 import {makeDiscovery} from "./discovery.mjs";
+import {makeCatalog,queryCatalog} from "./bazaar-catalog.mjs";
 import {validateReceiptQuery,preflightBaseUSDCReceipt} from "./base-usdc-receipt.mjs";
 import {parseGlbBase64, MAX_GLB_BYTES} from "./glb-analyzer.mjs";
 import {generateOriginalGlb} from "./procedural-lowpoly-generator.mjs";
@@ -672,6 +673,21 @@ app.get("/openapi.json",(req,res)=>{
 app.get(["/.well-known/x402","/.well-known/x402.json"],(req,res)=>{
   try{const origin=req.protocol+"://"+req.get("host");res.json(makeDiscovery(origin).wellKnown);}
   catch{return res.status(503).json({error:"Discovery host not available."});}
+});
+
+// FREE self-hosted schema-shaped x402 v2 catalog. This is not a
+// third-party Bazaar approval or a facilitator; all quotes come directly
+// from our actual configured paid routes. No wallet, RPC, payer or POST.
+app.get("/discovery/resources",(req,res)=>{
+  try{
+    const origin=req.protocol+"://"+req.get("host");
+    makeDiscovery(origin); // existing exact allowlist blocks Host-header spoofing
+    const catalog=makeCatalog(origin,routes);
+    res.setHeader("Cache-Control","public, max-age=600");
+    return res.status(200).json(queryCatalog(catalog,req.query));
+  }catch{
+    return res.status(400).json({error:"Invalid discovery request or public origin."});
+  }
 });
 
 app.options(["/v1/lint","/v1/analyze-glb","/v1/csv-preflight","/v1/workflow-risk"],(_req,res)=>res.status(204).end());
