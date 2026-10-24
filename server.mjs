@@ -23,6 +23,7 @@ import {getLiveTapeoutStateDiff,DIFF_PRICE_USDC,DIFF_BASELINE_BLOCK} from "./tap
 import {summarizeTapeoutSettlement,TAPEOUT_RECEIPT_PATH} from "./tapeout/settlement-audit.mjs";
 import {readLiveFourVenueFunding,DEMO_FUNDING,FUNDING_PRICE_USDC,FUNDING_PAYOUT_BASE} from "./funding/four-venue.mjs";
 import {echoCanonicalX402ChallengeOnFunding} from "./funding/x402-challenge-body-compat.mjs";
+import {readAaveBaseProxy,validateComponent,AAVE_COMPONENTS,AAVE_BASE_RPC} from "./aave/proxy1967.mjs";
 
 const DIR=path.dirname(fileURLToPath(import.meta.url));
 const PORT=Number(process.env.PORT||8736);
@@ -65,6 +66,15 @@ const documentation={
     scope:"Four fresh public exchange funding-rate quotes for BTC/USDT linear perpetuals: Binance, Bybit, OKX, Bitget, with named MEXC/Gate.io backups if one original venue is region-blocked. Four ACTUAL successful distinct quotes before x402; incomplete, stale, malformed or unavailable quotes return 503 without charge.",
     freePreview:"GET /v1/btc-funding-sample",independentPaidCustomerCount:0,
     limitations:"Raw public observations only. Venue-specific funding schedules may differ; not annualized, not profitable arbitrage, not price advice, no trading. Original VM1 receive-only Base USDC."
+  },
+  paidAaveBaseERC1967:{
+    method:"GET",path:"/v1/aave-base-proxy-facts",priceNativeBaseCircleUSDC:"0.01",
+    network:NETWORK,asset:"0x833589fCD6eDb6E08f4C7C32d4f71b54bdA02913",payTo:FUNDING_PAYOUT_BASE,
+    scope:"Aave V3 Base Pool or PoolConfigurator ERC-1967 implementation, admin and beacon storage slots observed at one pinned Base block, with actual proxy/implementation bytecode size and SHA256. Only two fixed firstparty-listed addresses. Never acts on wallets, funds, upgrades or contracts.",
+    input:"GET exact route, optional component=pool or component=configurator. No other chain, RPC server, contract address, query, request body, customer identity or wallet keys.",
+    freePreview:"GET /v1/aave-base-proxy-sample",
+    limitations:"Read-only public facts, not a security audit, proof of upgrade authority, code equivalence, real-time alerts, or investment advice. Aave official address book can change. An empty EIP-1967 admin slot does not mean no governance.",
+    independentlyVerifiedOutsideBuyerPurchasesForThisNewSKU:0
   },
   paidTapeoutGenesisCpu:{
     method:"GET",path:"/v1/tapeout-cpu0-report",priceUSDC:TAPEOUT_PRICE_USDC,
@@ -180,6 +190,23 @@ const routes={
       output:{example:{ok:true,paid:true,chargedUSDC:"0.20",network:NETWORK,staticOnly:true,findingsTruncated:false,
         workflowEvents:["pull_request"],counts:{high:0,medium:1,note:0},noWorkflowExecuted:true,
         confirmedIndependentPaidCustomers:0}}
+    })
+  },
+  "GET /v1/aave-base-proxy-facts":{
+    accepts:{scheme:"exact",price:"$0.01",network:NETWORK,payTo:FUNDING_PAYOUT_BASE},
+    description:"Bounded read-only Aave V3 Base Pool or PoolConfigurator ERC-1967 implementation/admin/beacon storage and proxy/logic runtime code hashes at a pinned current Base block. Only firstparty-published Aave addresses, free prerequisite complete before Base USDC0.01 x402 authorization. Not an audit or proof of permissionless upgrades.",
+    mimeType:"application/json",
+    extensions:declareDiscoveryExtension({
+      method:"GET",output:{example:{
+        ok:true,paid:true,chargedUSDC:"0.01",network:"eip155:8453",
+        kind:"aave_v3_base_erc1967_upgradeability_facts",component:"pool",chainId:8453,
+        blockNumber:"52901000",exampleOnly:true,
+        proxy:AAVE_COMPONENTS.pool.proxy,
+        implementation:AAVE_COMPONENTS.pool.addressBookImplementation,
+        matchesPublishedAaveAddressBook:true,
+        proxyCode:{codeBytes:500},implementationCode:{codeBytes:20000},
+        noSignerOrTransaction:true,notAnAuditOrUpgradeAuthorizationProof:true
+      }}
     })
   },
   "GET /v1/btc-funding-four-venues":{
@@ -598,6 +625,38 @@ app.get("/v1/base-usdc-receipt",async(req,res,next)=>{
 // Compatibility for legacy marketplace probes: x402 v2's canonical PaymentRequired
 // stays in PAYMENT-REQUIRED; mirror that identical public quote in a JSON 402 body
 // only for the already-paid GET template route. Do not change any payment/settlement.
+// Only the original VM1 paid Aave V3 Base facts GET: mirror a completely
+// validated canonical public x402 header, never generate a payment requirement,
+// change the signed transport, verify/settle, or accept another buyer recipient.
+function echoCanonicalAaveBase402(req,res,next){
+  const send=res.send;
+  res.send=function(body){
+    const wire=res.getHeader("PAYMENT-REQUIRED");
+    if(res.statusCode===402 && typeof wire==="string" && wire.length<19000){
+      try{
+        const quote=JSON.parse(Buffer.from(wire,"base64").toString("utf8"));
+        const a=quote?.accepts;
+        const url=new URL(quote?.resource?.url);
+        if(quote?.x402Version===2 &&
+           url.pathname==="/v1/aave-base-proxy-facts" && !url.hash &&
+           url.pathname+url.search===req.originalUrl &&
+           Array.isArray(a) && a.length===1 &&
+           a[0]?.scheme==="exact" && a[0]?.network===NETWORK &&
+           a[0]?.payTo?.toLowerCase()===FUNDING_PAYOUT_BASE.toLowerCase() &&
+           a[0]?.asset?.toLowerCase()==="0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" &&
+           a[0]?.amount==="10000"){
+          res.setHeader("X-Payment-Required",wire);
+          res.setHeader("Access-Control-Expose-Headers","PAYMENT-REQUIRED,X-Payment-Required,PAYMENT-RESPONSE");
+          res.type("json");
+          return send.call(res,JSON.stringify(quote));
+        }
+      }catch{ /* Preserve original middleware 402 on any mismatch. */ }
+    }
+    return send.call(res,body);
+  };
+  next();
+}
+
 function echoCanonicalX402ChallengeOnTemplate(_req,res,next) {
   const send=res.send;
   res.send=function(body) {
@@ -765,6 +824,55 @@ app.get("/v1/tapeout-cpu0-report",async(req,res,next)=>{
   verifiedThirdPartyPaidOrdersForThisRoute:0,
   disclosure:"Buyer has expressly authorized the x402 middleware payment; this JSON reports public X Layer state, not the identity/independence of any buyer nor independent settlement finality."
 }));
+// Free FICTIONAL preview (not an independently verified Aave upgrade alert or
+// bought report). The live paid route queries ONLY fixed original Aave DAO
+// published Base addresses; no arbitrary contracts or RPC proxy endpoint.
+app.get("/v1/aave-base-proxy-sample",(req,res)=>{
+  if(req.originalUrl!=="/v1/aave-base-proxy-sample"||Object.keys(req.query).length||req.get("Content-Length")||req.get("Transfer-Encoding"))
+    return res.status(400).json({ok:false,charged:false,error:"Only exact public synthetic preview GET supported"});
+  return res.status(200).json({
+    ok:true,paid:false,chargedUSDC:"0",exampleOnly:true,
+    kind:"aave_v3_base_erc1967_upgradeability_facts",dataChain:"eip155:8453",component:"pool",
+    proxy:AAVE_COMPONENTS.pool.proxy,aaveFirstPartyAddressBookURL:"https://github.com/aave-dao/aave-address-book/blob/main/src/AaveV3Base.sol",
+    standard:"https://eips.ethereum.org/EIPS/eip-1967",
+    illustrativeImplementation:AAVE_COMPONENTS.pool.addressBookImplementation,
+    illustrativeBlock:"SYNTHETIC_NOT_AN_ACTUAL_OBSERVATION",
+    priceNativeBaseCircleUSDC:"0.010000",paymentNetwork:NETWORK,
+    payTo:FUNDING_PAYOUT_BASE,
+    paidEndpoint:"GET /v1/aave-base-proxy-facts?component=pool (or component=configurator)",
+    precautions:"Only current, public, read-only EIP-1967 implementation/admin/beacon slot and code-size facts. An empty admin slot does not prove that governance or upgrades are disabled. No security audit, no wallet keys, no transaction, no trade, no investment recommendations."
+  });
+});
+const aaveRateByIP=new Map();
+let aaveInFlight=0;
+app.get("/v1/aave-base-proxy-facts",async(req,res,next)=>{
+  const check=validateComponent(req.query);
+  if(!check.ok||req.get("Content-Length")||req.get("Transfer-Encoding") ||
+     req.originalUrl!=="/v1/aave-base-proxy-facts"+ (check.component==="configurator"?"?component=configurator":req.query.component==="pool"?"?component=pool":""))
+    return res.status(400).json({ok:false,charged:false,error:check.error||"Only exact GET and optional component=pool|configurator without body/query extras supported"});
+  const now=Date.now(),ip=req.ip,previous=aaveRateByIP.get(ip);
+  const stats=(!previous||now-previous.start>60000)?{start:now,count:0}:previous;
+  stats.count++;aaveRateByIP.set(ip,stats);
+  if(aaveRateByIP.size>500)for(const [key,v] of aaveRateByIP)if(now-v.start>60000)aaveRateByIP.delete(key);
+  if(stats.count>(process.env.NODE_ENV==="test"?100:3)){
+    res.setHeader("Retry-After","60");
+    return res.status(429).json({ok:false,charged:false,error:"Bounded public Aave data reads at most three/minute/IP"});
+  }
+  if(aaveInFlight>=2)return res.status(503).json({ok:false,charged:false,error:"Public Base proof fetch is busy; no payment requested"});
+  aaveInFlight++;
+  try{
+    res.locals.aaveBaseProof=await readAaveBaseProxy(check.component);
+    next();
+  }catch{
+    return res.status(503).json({ok:false,charged:false,error:"Complete pinned public Aave Base proxy proof unavailable; no payment requested"});
+  }finally{aaveInFlight=Math.max(0,aaveInFlight-1);}
+},echoCanonicalAaveBase402,payment,(_req,res)=>res.status(200).json({
+  ...res.locals.aaveBaseProof,
+  ok:true,paid:true,chargedUSDC:"0.01",network:NETWORK,originalVM1Payout:FUNDING_PAYOUT_BASE,
+  exampleOnly:false,independentlyVerifiedOrganicCustomersForThisSKU:0,
+  caveat:"An authenticated x402 middleware response gates this hosted public observation; these fields do not prove Aave DAO governance or safety, and are not independent settlement verification. No wallet custody or audit endorsement."
+}));
+
 // Distinct paid historical change-set SKU. No buyer parameters, no payment if
 // one of the two pinned RPC snapshots is incomplete or the chain is unavailable.
 // New original read-only multi-venue futures funding-rate SKU. The sample is
@@ -856,7 +964,7 @@ app.get("/.well-known/x402-bazaar-manifest.json",(req,res)=>{
   try{
     const origin=req.protocol+"://"+req.get("host");
     makeDiscovery(origin); // canonical public origin allowlist, no Host-based injection
-    const catalog=makeCatalog(origin,routes); // 16 actual unmodified paid routes
+    const catalog=makeCatalog(origin,routes); // 17 actually configured paid routes, including NEW Aave Pool facts
     const resources=catalog.items.map(row=>{
       const path=new URL(row.resource).pathname;
       const matching=Object.entries(routes).filter(([key])=>key.endsWith(" "+path));
@@ -870,7 +978,7 @@ app.get("/.well-known/x402-bazaar-manifest.json",(req,res)=>{
         accepts:row.accepts.map(a=>({...a,extra:{...a.extra}})),
       };
     });
-    if(resources.length!==16)throw Error("Incomplete public manifest");
+    if(resources.length!==17)throw Error("Incomplete public manifest");
     res.setHeader("Cache-Control","public, max-age=120");
     return res.status(200).json({
       x402Version:2,provider:"VM5 Delivery Lab — original one-owner AI-assisted Base USDC tools",

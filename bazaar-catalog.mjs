@@ -48,7 +48,7 @@ export function makeCatalog(origin,routeConfig) {
       // transaction, customer order, official marketplace listing or settlement.
     };
   }).sort((a,b)=>a.resource.localeCompare(b.resource,"en"));
-  if(items.length!==16)throw Error("Unexpected number of paid routes: require 15 unchanged originals plus 1 new verified four-venue source");
+  if(items.length!==17)throw Error("Unexpected number of paid routes: 16 existing plus one new Aave Base proxy facts source");
   return Object.freeze({x402Version:2,items});
 }
 export function queryCatalog(catalog,query={}) {
