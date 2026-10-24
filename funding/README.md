@@ -14,6 +14,12 @@ Four response entries include `venue`, quoted signed `quotedFundingRate`, percen
 
 The free preview uses a clearly **fictional 2026-01-01 example**, not a current exchange quote. This repo includes unit tests with injected synthetic first-party response fixtures and independently runs a read-only real four-exchange API smoke test. Existing legacy merchant SKUs retain their own original x402 payTo and prices unchanged.
 
+### Unpaid x402 challenge for simple directory validators
+
+The canonical x402 v2 payment instructions remain in the HTTP `PAYMENT-REQUIRED` header. For clients which inspect only the response body (for example the free Market402 self-test), the **same public quote** is also echoed as the HTTP 402 JSON body, and `X-Payment-Required` is exposed as an optional legacy alias. It is not a payment, proof of receipt, token approval or settlement. A directory's local self-test is not an independently paid buyer order, verified merchant badge or customer approval.
+
+The compatibility path is deliberately limited to **this exact GET** and only applies after four independently valid, current upstream observations. The middleware verifies the original source header before echoing it: x402Version 2, one `exact` acceptance, Base8453, Circle native USDC contract, 10,000 atomic token units and the **existing original VM1 payee**. On any mismatch, malformed quote, stale upstream data or unexpected query, the response preserves the underlying rejection unchanged; no settlement amount, verifier, facilitator, wallet, successful 200 data or signatures are modified. Tests include zero-spend positive, fail-closed adversarial cases, and all existing merchant products.
+
 ### Manual smoke without spending
 
 ```sh
