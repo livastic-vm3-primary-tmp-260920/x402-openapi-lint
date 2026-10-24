@@ -54,6 +54,14 @@ Successful paid invocation returns a Redocly findings report. Bad YAML, external
 
 **Additional zero-fee discovery:** Registered with Agent402 (seller is listed, routable with one paid route) and [402 Index](https://402index.io/api/v1/services/2f13b34e-d85b-43d9-b2d4-d3b4047641fc) (HTTP 201 registration and verified domain claim, public listing active/healthy). x402scan remains the original index at https://www.x402scan.com/server/7674c5b5-4645-4f5a-9b08-d7b8af61fd21. Being indexed does **not** prove a sale or real settlement.
 
+## Aave V3 Base Pool implementation facts — new original DeFi read-only product (AI-assisted)
+
+`GET /v1/aave-base-proxy-sample` is a clearly fictional, **FREE** example (never a live security result or paid receipt). The original VM1-funded merchant offers `GET /v1/aave-base-proxy-facts` (default Pool) and `GET /v1/aave-base-proxy-facts?component=configurator` (only one of TWO fixed legitimate Aave Base addresses), for **0.010000 native Circle Base USDC per successful x402 v2 request** to the same original VM1 receiving address `0x4e3106520E40af30870caFE78da1B1e7110eD98E`, network Base8453. Anyone can inspect the free preview and unsigned 402 quote; a purchase requires an independent client wallet authorization and is **not made by reading this documentation or free preview**.
+
+It reports exactly one pinned Base chain state for published [Aave official V3 Base addresses](https://github.com/aave-dao/aave-address-book/blob/main/src/AaveV3Base.sol), standard [ERC-1967](https://eips.ethereum.org/EIPS/eip-1967) `implementation`, `admin`, `beacon` storage slots, the code size and **SHA-256 (not `EXTCODEHASH`)** of the proxy/implementation bytecode, and whether the implementation matches the address last published in the primary-source Aave address book. Fixed Base JSON-RPC destination, no arbitrary external URLs or customer-supplied contract addresses, bounded 3 public RPC batch calls, source-read concurrency <=2, per-client3/min. Source/network/code preflight must succeed before any x402 402; failure is free HTTP400/429/503. No wallet keys, private customer data, mainnet transactions, signing, custody, upgrade calls, safety/permission certification, monitoring subscription or trade advice.
+
+IMPORTANT: A `null` EIP-1967 admin slot **does not mean no governance or no upgrade authority**. Contracts can implement other patterns. A first-party address-book mismatch can mean an update is pending or has occurred; it is not evidence of exploitation. The purchase is for convenient machine-readable public facts that users can independently fetch from RPC for free. **No independent paid buyer or positive net income is claimed for this newly introduced route** until separately proved.
+
 ## Run and test
 
 Requires Node 22+. From this directory:
